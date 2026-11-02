@@ -69,3 +69,8 @@ steps = ["core"]
 name = "the placeholder songs' maker"
 files = ["tools/placeholders/**"]
 steps = ["core", "build", "browser"]
+
+[[rule]]
+name = "the song tools"
+files = ["tools/songs/**"]
+steps = ["core", "build", "browser"]

@@ -28,6 +28,10 @@ use crate::tuning::{DIFFICULTIES, FIELD_H, FIELD_W};
 pub const LEAD_US: i64 = 1_000_000;
 /// The first target never appears sooner than this after the song starts.
 pub const FIRST_TARGET_MARGIN_US: i64 = 500_000;
+/// The maker named on the songs this project made itself.
+pub const OUR_OWN: &str = "BOSU";
+/// The largest difference between two decodes' starts taken as real.
+pub const MAX_SHIFT_US: i64 = 60_000;
 /// A play ends this long after its last target, if the song runs on.
 pub const OUTRO_US: i64 = 2_000_000;
 
@@ -317,6 +321,9 @@ pub struct Game {
     pub(crate) tile_at_ms: Option<i64>,
     /// Waiting for the next key, to add it as a press key.
     pub(crate) listening: bool,
+    /// How much earlier this browser's decode of the song starts than the
+    /// build's (R6.6); added to song time.
+    pub(crate) audio_shift_us: i64,
     /// The lobby and the ledger's traffic (`together.rs`).
     pub(crate) together: crate::together::Together,
 }
@@ -384,6 +391,7 @@ impl Game {
             pointer: (FIELD_W / 2, FIELD_H / 2),
             tile_at_ms: None,
             listening: false,
+            audio_shift_us: 0,
             together: crate::together::Together::new(&crate::catalog::fnv(index_json.as_bytes())),
         })
     }
@@ -722,7 +730,7 @@ impl Game {
         let Some(start) = session.start_us else {
             return;
         };
-        let t = heard - start - offset;
+        let t = heard - start - offset + self.audio_shift_us;
         session.play.input(Input::Move {
             t,
             x: pointer.0,
@@ -733,6 +741,22 @@ impl Game {
             2 => session.play.input(Input::Up { t, button }),
             _ => {}
         }
+    }
+
+    /// The first seconds of the song as this browser decoded it, at `rate`
+    /// samples a second: where its first sound falls, against where the
+    /// build's decode found it, gives the shift to song time. A shift past
+    /// `MAX_SHIFT_US` is taken as a song that opens too softly to tell, and
+    /// ignored.
+    pub fn audio_head(&mut self, url: &str, samples: &[i16], rate: i64) {
+        let song = &self.index.songs[self.song];
+        let expected = song.first_sound_us;
+        self.audio_shift_us = match crate::beats::first_sound_us(samples, rate.max(1)) {
+            Some(here) if url == self.audio_url() && (expected - here).abs() <= MAX_SHIFT_US => {
+                expected - here
+            }
+            _ => 0,
+        };
     }
 
     /// One key going down (`kind` 1) or up (`kind` 2), by its code. Escape
@@ -818,7 +842,7 @@ impl Game {
         let Some(start) = session.start_us else {
             return;
         };
-        let now = heard - start - offset;
+        let now = heard - start - offset + self.audio_shift_us;
         session.song_now = now;
         session.play.advance(now);
         self.post_score(now, false);
@@ -901,7 +925,28 @@ impl Game {
             Screen::Title => {
                 let mut p = panel("intro");
                 p.heading = self.s("title");
-                p.lines.push(self.s("intro"));
+                p.lines.push(self.s("title.tagline"));
+                // who made the songs, in the order they first appear
+                let mut makers: Vec<String> = Vec::new();
+                for s in &self.index.songs {
+                    if s.by != OUR_OWN && !makers.contains(&s.by) {
+                        makers.push(s.by.clone());
+                    }
+                }
+                let names = match makers.len() {
+                    0 => String::new(),
+                    1 => makers[0].clone(),
+                    n => format!(
+                        "{} {} {}",
+                        makers[..n - 1].join(", "),
+                        self.s("title.and"),
+                        makers[n - 1]
+                    ),
+                };
+                p.lines.push(self.f(
+                    "title.songs",
+                    &[("n", self.index.songs.len().to_string()), ("makers", names)],
+                ));
                 p.actions
                     .push(action("screen.show", "select", self.s("menu.play")));
                 p.actions.push(action("online.host", "", self.s("menu.host")));
@@ -909,6 +954,10 @@ impl Game {
                 p.actions
                     .push(action("screen.show", "settings", self.s("menu.settings")));
                 panels.push(p);
+                let mut how = panel("how");
+                how.heading = self.s("title.how");
+                how.lines.push(self.s("intro"));
+                panels.push(how);
             }
             Screen::Lobby => self.lobby_panels(&mut panels),
             Screen::Join => self.join_panels(&mut panels),
@@ -1528,6 +1577,7 @@ mod tests {
             audio_hash: "a1".into(),
             bpm_milli: 120_000,
             length_us: 60_000_000,
+            first_sound_us: 0,
             charts: (0..5)
                 .map(|d| ChartEntry {
                     difficulty: d,
@@ -1624,6 +1674,71 @@ mod tests {
         assert_eq!(
             g.session.as_ref().unwrap().play.feed.last().unwrap().offset_us,
             -20_000
+        );
+    }
+
+    #[test]
+    fn a_browser_that_trims_the_song_s_start_is_moved_back_onto_the_chart() {
+        // the build heard the first sound at 23 ms; this browser at 12 ms,
+        // so everything in its copy comes 11 ms early and song time moves
+        // 11 ms on
+        let mut g = playing();
+        g.index.songs[0].first_sound_us = 23_000;
+        // quiet hiss, then the first hit at sample 529
+        let mut head = vec![300i16; 44_100];
+        for s in head.iter_mut().skip(529) {
+            *s = 5000;
+        }
+        g.audio_head("audio/s.mp3?h=a1", &head, 44_100);
+        assert_eq!(g.audio_shift_us, 23_000 - 529 * 1_000_000 / 44_100);
+        // a press heard 11 ms before the target's time is on time
+        g.input(
+            0,
+            MOUSE,
+            600,
+            400,
+            FIELD_W,
+            FIELD_H,
+            10_500_000,
+            100_000_000,
+            101_488_995,
+        );
+        g.input(
+            1,
+            MOUSE,
+            600,
+            400,
+            FIELD_W,
+            FIELD_H,
+            10_500_000,
+            100_000_000,
+            101_488_995,
+        );
+        assert_eq!(g.session.as_ref().unwrap().play.feed.last().unwrap().offset_us, 0);
+        // another song's head, or one too far off, changes nothing
+        g.audio_head("audio/other.mp3", &head, 44_100);
+        assert_eq!(g.audio_shift_us, 0);
+        let late = vec![5000i16; 1];
+        g.index.songs[0].first_sound_us = 900_000;
+        g.audio_head("audio/s.mp3?h=a1", &late, 44_100);
+        assert_eq!(g.audio_shift_us, 0);
+    }
+
+    #[test]
+    fn the_title_credits_each_maker_once_and_not_our_own() {
+        let mut g = game();
+        let mut more = g.index.songs[0].clone();
+        more.by = "Leefy5".into();
+        let mut ours = more.clone();
+        ours.by = OUR_OWN.into();
+        g.index.songs[0].by = "Emracool".into();
+        g.index.songs.push(more.clone());
+        g.index.songs.push(more);
+        g.index.songs.push(ours);
+        let lines = &g.ui().panels[0].lines;
+        assert_eq!(
+            lines[1],
+            "4 songs, five difficulties each, by Emracool and Leefy5, and a few of our own."
         );
     }
 

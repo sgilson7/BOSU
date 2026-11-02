@@ -267,6 +267,8 @@ pub fn assets() -> String {
         "percent": 100,
         // how many random bytes the page draws at load (together.rs)
         "random_bytes": 48,
+        // how many seconds of a decoded song the page hands the core (game::audio_head)
+        "head_seconds": crate::beats::HEAD_SECONDS,
         // what `game::input` takes: the kind of event, and a button per key
         "kinds": {"move": 0, "press": 1, "release": 2},
         "mouse": 0,

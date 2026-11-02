@@ -20,6 +20,9 @@ pub const MIN_BPM: i64 = 70;
 pub const MAX_BPM: i64 = 190;
 /// A tempo below this is doubled when the double still fits.
 pub const COMFORT_BPM: i64 = 90;
+/// A whole-number tempo is taken when its grid scores at least this share
+/// (percent) of the best fit's.
+pub const WHOLE_BPM_PCT: i64 = 97;
 /// Grid slots a beat: strengths are kept on quarter beats.
 pub const SLOTS_PER_BEAT: i64 = 4;
 
@@ -34,6 +37,34 @@ pub struct Analysis {
     pub length_us: i64,
     /// Onset strength at each quarter beat from `first_beat_us`.
     pub slots: Vec<u32>,
+    /// Where the first sound is in this decode. A browser that trims the
+    /// start of an MP3 differently finds it elsewhere, and the game moves
+    /// song time by the difference (R6.6).
+    #[serde(default)]
+    pub first_sound_us: i64,
+}
+
+/// How much of a song's opening is searched for its first sound, in
+/// seconds. The page hands the core this much of its own decode.
+pub const HEAD_SECONDS: i64 = 3;
+/// The first sound is the first sample at least this share (1 in N) of the
+/// opening's loudest: a strong attack, which every decoder and sample rate
+/// places within a twentieth of a millisecond, where a fixed low level
+/// wanders by ten on a song that fades in (R6.6).
+pub const FIRST_SOUND_SHARE: i32 = 4;
+
+/// The time of the first sound in the opening `HEAD_SECONDS`, in
+/// microseconds at `rate` samples a second.
+pub fn first_sound_us(samples: &[i16], rate: i64) -> Option<i64> {
+    let head = &samples[..samples.len().min((HEAD_SECONDS * rate) as usize)];
+    let peak = head.iter().map(|s| (*s as i32).abs()).max()?;
+    if peak == 0 {
+        return None;
+    }
+    let k = head
+        .iter()
+        .position(|s| (*s as i32).abs() * FIRST_SOUND_SHARE >= peak)?;
+    Some(k as i64 * US / rate)
 }
 
 impl Analysis {
@@ -144,6 +175,13 @@ fn fit(onsets: &[i64], periods: (i64, i64), p_step: i64, f_step: i64, length: i6
 /// Finds the tempo, the phase and the quarter-beat strengths of a song.
 /// Returns `None` for a song too short or too quiet to have a beat.
 pub fn analyse(samples: &[i16]) -> Option<Analysis> {
+    analyse_with(samples, None)
+}
+
+/// As `analyse`, with the tempo given in thousandths of a beat a minute
+/// (from the song's project, in `data/songs.json`): only the first beat is
+/// found (R6.4).
+pub fn analyse_with(samples: &[i16], bpm_milli: Option<i64>) -> Option<Analysis> {
     let onsets = envelope(samples);
     let length = samples.len() as i64 * US / RATE;
     let hop = hop_us();
@@ -164,6 +202,15 @@ pub fn analyse(samples: &[i16]) -> Option<Analysis> {
     if best.0 == 0 {
         return None;
     }
+    let first = first_sound_us(samples, RATE).unwrap_or(0);
+    if let Some(bpm) = bpm_milli.filter(|b| *b > 0) {
+        let period = 60 * US * 1000 / bpm;
+        let (_, phase) = fit(&onsets, (period, period), 1, hop / 8, length);
+        return Some(Analysis {
+            first_sound_us: first,
+            ..slots_for(&onsets, period, phase, length)
+        });
+    }
     let mut lag_us = best.1 * hop;
     if 60 * US / lag_us < COMFORT_BPM && 60 * US / (lag_us / 2) <= MAX_BPM {
         lag_us /= 2;
@@ -176,23 +223,45 @@ pub fn analyse(samples: &[i16]) -> Option<Analysis> {
         hop / 2,
         length,
     );
-    let (beat_us, phase) = fit(&onsets, (p - 400, p + 400), 10, hop / 8, length);
+    let (fitted, fitted_phase) = fit(&onsets, (p - 400, p + 400), 10, hop / 8, length);
+    // songs made in Ableton almost always sit on a whole number of beats a
+    // minute; a fit a hair off one drifts tens of ms by the end (R6.4). Take
+    // the whole number when its grid scores nearly as well.
+    let best = grid_score(&onsets, fitted, fitted_phase, length);
+    let whole_bpm = (60 * US * 1000 / fitted + 500) / 1000;
+    let whole_period = 60 * US / whole_bpm.max(1);
+    let (_, whole_phase) = fit(&onsets, (whole_period, whole_period), 1, hop / 8, length);
+    let whole_score = grid_score(&onsets, whole_period, whole_phase, length);
+    let (beat_us, phase) = if whole_score * 100 >= best * WHOLE_BPM_PCT {
+        (whole_period, whole_phase)
+    } else {
+        (fitted, fitted_phase)
+    };
+    Some(Analysis {
+        first_sound_us: first,
+        ..slots_for(&onsets, beat_us, phase, length)
+    })
+}
+
+fn slots_for(onsets: &[i64], beat_us: i64, phase: i64, length: i64) -> Analysis {
+    let hop = hop_us();
     let first_beat_us = phase % beat_us;
     let count = ((length - first_beat_us) * SLOTS_PER_BEAT / beat_us).max(0) as usize;
     let slots = (0..count)
         .map(|q| {
             let t = first_beat_us + q as i64 * beat_us / SLOTS_PER_BEAT;
-            env_at(&onsets, t)
-                .max(env_at(&onsets, t - hop))
+            env_at(onsets, t)
+                .max(env_at(onsets, t - hop))
                 .min(u32::MAX as i64) as u32
         })
         .collect();
-    Some(Analysis {
+    Analysis {
         beat_us,
         first_beat_us,
         length_us: length,
         slots,
-    })
+        first_sound_us: 0,
+    }
 }
 
 #[cfg(test)]
@@ -329,6 +398,41 @@ pub mod tests {
                 &a.slots[beat * 4..beat * 4 + 4]
             );
         }
+    }
+
+    #[test]
+    fn a_whole_number_tempo_is_found_exactly() {
+        // 120 bpm with some loud hits off the beat, which pull a free fit
+        let mut c = clicks_at(120, 150_000, 60);
+        for k in (5..c.len()).step_by(9) {
+            c.push((c[k].0 + 70_000, 15_000));
+        }
+        c.sort();
+        let a = analyse(&song(60, &c, 6)).expect("a beat");
+        assert_eq!(a.beat_us, 500_000, "found {} milli-bpm", a.bpm_milli());
+        // and a tempo that is not whole keeps its fraction: 124.6 bpm
+        let beat = 60 * US * 10 / 1246;
+        let mut c = Vec::new();
+        let mut t = 100_000;
+        while t < 60 * US {
+            c.push((t, 12_000));
+            t += beat;
+        }
+        let a = analyse(&song(60, &c, 7)).expect("a beat");
+        assert!((a.bpm_milli() - 124_600).abs() <= 50, "found {}", a.bpm_milli());
+    }
+
+    #[test]
+    fn a_given_tempo_is_kept_and_only_the_first_beat_is_found() {
+        let s = song(30, &clicks_at(120, 210_000, 30), 8);
+        // 240 is past what the search would choose, so only a kept tempo gives it
+        let a = analyse_with(&s, Some(240_000)).expect("a beat");
+        assert_eq!(a.beat_us, 250_000);
+        assert!(
+            (a.first_beat_us - 210_000).abs() <= hop_us(),
+            "first beat {}",
+            a.first_beat_us
+        );
     }
 
     #[test]

@@ -24,9 +24,23 @@ fn fail(message: &str) -> ! {
 }
 
 fn decode(path: &str) -> Vec<i16> {
+    decode_with(path, &["-ac", "1"], beats::RATE)
+}
+
+/// The opening of the left channel alone, at the page's usual rate: what the
+/// page hands the core from its own decode (`game::audio_head`, R6.6).
+const HEAD_RATE: i64 = 44_100;
+fn decode_head(path: &str) -> Vec<i16> {
+    let secs = beats::HEAD_SECONDS.to_string();
+    decode_with(path, &["-af", "pan=mono|c0=c0", "-t", &secs], HEAD_RATE)
+}
+
+fn decode_with(path: &str, args: &[&str], rate: i64) -> Vec<i16> {
     let out = Command::new("ffmpeg")
-        .args(["-loglevel", "error", "-i", path, "-ac", "1", "-ar"])
-        .arg(beats::RATE.to_string())
+        .args(["-loglevel", "error", "-i", path])
+        .args(args)
+        .arg("-ar")
+        .arg(rate.to_string())
         .args(["-f", "s16le", "-"])
         .output()
         .unwrap_or_else(|e| fail(&format!("cannot run ffmpeg (brew install ffmpeg): {e}")));
@@ -56,7 +70,10 @@ fn main() {
             fs::create_dir_all("data/analysis").unwrap_or_else(|e| fail(&e.to_string()));
             for s in &songs.songs {
                 let samples = decode(&format!("web/{}", s.audio));
-                let a = beats::analyse(&samples).unwrap_or_else(|| fail(&format!("{}: no beat found", s.id)));
+                let mut a = beats::analyse_with(&samples, s.bpm_milli)
+                    .unwrap_or_else(|| fail(&format!("{}: no beat found", s.id)));
+                a.first_sound_us =
+                    beats::first_sound_us(&decode_head(&format!("web/{}", s.audio)), HEAD_RATE).unwrap_or(0);
                 let text = serde_json::to_string(&a).unwrap_or_default() + "\n";
                 fs::write(analysis_path(&s.id), text).unwrap_or_else(|e| fail(&e.to_string()));
                 println!(
@@ -125,6 +142,35 @@ fn main() {
                 }
             );
         }
-        _ => fail("usage: chart analyse | charts | check"),
+        "stability" => {
+            // each song's grid from its first and second halves alone, set
+            // against the whole song's: a song whose halves disagree has no
+            // one steady beat, and its charts need a person's ear (R6.4)
+            for s in &songs.songs {
+                let samples = decode(&format!("web/{}", s.audio));
+                let whole = beats::analyse(&samples).unwrap_or_else(|| fail("no beat"));
+                let half = samples.len() / 2;
+                let offset_us = half as i64 * 1_000_000 / beats::RATE;
+                let (a, b) = (beats::analyse(&samples[..half]), beats::analyse(&samples[half..]));
+                let off = |first: i64| {
+                    let q = whole.beat_us / 4;
+                    let d = (first - whole.first_beat_us).rem_euclid(q);
+                    d.min(q - d) / 1000
+                };
+                match (a, b) {
+                    (Some(a), Some(b)) => println!(
+                        "{:24} whole {:>8.3} | first half {:>8.3}, {:>3} ms off the grid | second half {:>8.3}, {:>3} ms off",
+                        s.id,
+                        whole.bpm_milli() as f64 / 1000.0,
+                        a.bpm_milli() as f64 / 1000.0,
+                        off(a.first_beat_us),
+                        b.bpm_milli() as f64 / 1000.0,
+                        off(b.first_beat_us + offset_us)
+                    ),
+                    _ => println!("{:24} a half has no beat", s.id),
+                }
+            }
+        }
+        _ => fail("usage: chart analyse | charts | check | stability"),
     }
 }

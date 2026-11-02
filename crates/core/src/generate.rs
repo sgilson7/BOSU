@@ -19,9 +19,13 @@ pub const PHRASE_BEATS: i64 = 8;
 /// Targets start this long after the song's first onset strong enough to
 /// keep, and stop this long before its end.
 const LEAD_OUT_US: i64 = 1_500_000;
-/// A slot quieter than this share (percent) of the song's loudest slot is
-/// never a target.
+/// A slot quieter than this share (percent) of the song's strong slots is
+/// never a target. "Strong" is the 95th percentile, not the loudest: one
+/// huge hit in a real song set the bar so high that Grunge Dome kept two
+/// targets on Easy (R6.2).
 const FLOOR_PCT: u64 = 8;
+/// The percentile that counts as strong.
+const STRONG_PCT: usize = 95;
 /// Tries at placing one target before taking the least-bad spot.
 const TRIES: u32 = 96;
 /// The gap before the next target that may hold, in beats.
@@ -40,18 +44,37 @@ fn dist2(a: (i32, i32), b: (i32, i32)) -> i64 {
 /// The slots that become targets, in time order.
 pub fn choose_slots(a: &Analysis, d: &Difficulty) -> Vec<usize> {
     let step = (SLOTS_PER_BEAT / d.grid) as usize;
-    let loudest = a.slots.iter().copied().max().unwrap_or(0) as u64;
-    let floor = loudest * FLOOR_PCT / 100;
+    let mut sorted = a.slots.clone();
+    sorted.sort_unstable();
+    let strong = sorted.get(sorted.len() * STRONG_PCT / 100).copied().unwrap_or(0) as u64;
+    let floor = strong * FLOOR_PCT / 100;
     let last_t = a.length_us - LEAD_OUT_US;
-    let mut candidates: Vec<usize> = (0..a.slots.len())
+    let candidates: Vec<usize> = (0..a.slots.len())
         .step_by(step)
         .filter(|&q| a.slots[q] as u64 > floor && a.slot_time(q) <= last_t && a.slot_time(q) >= 1_000_000)
         .collect();
-    // strongest first; earlier first among equals
-    candidates.sort_by(|&p, &q| a.slots[q].cmp(&a.slots[p]).then(p.cmp(&q)));
-    let keep = (candidates.len() as i64 * d.keep_pct / 100) as usize;
+    // The strongest share within each phrase, so a quiet verse gets targets
+    // in proportion and a loud chorus does not take them all (R6.7); then
+    // strongest first, earlier first among equals, for the gap below.
+    let phrase_slots = (PHRASE_BEATS * SLOTS_PER_BEAT) as usize;
+    let mut kept: Vec<usize> = Vec::new();
+    let mut start = 0;
+    while start < candidates.len() {
+        let phrase = candidates[start] / phrase_slots;
+        let end = start
+            + candidates[start..]
+                .iter()
+                .take_while(|&&q| q / phrase_slots == phrase)
+                .count();
+        let mut group = candidates[start..end].to_vec();
+        group.sort_by(|&p, &q| a.slots[q].cmp(&a.slots[p]).then(p.cmp(&q)));
+        let keep = ((group.len() as i64 * d.keep_pct + 99) / 100) as usize;
+        kept.extend(group.into_iter().take(keep));
+        start = end;
+    }
+    kept.sort_by(|&p, &q| a.slots[q].cmp(&a.slots[p]).then(p.cmp(&q)));
     let mut chosen: Vec<usize> = Vec::new();
-    for &q in candidates.iter().take(keep) {
+    for &q in kept.iter() {
         let t = a.slot_time(q);
         let clear = chosen.iter().all(|&c| (a.slot_time(c) - t).abs() >= d.min_gap_us);
         if clear {
@@ -328,6 +351,36 @@ pub mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn one_huge_hit_does_not_empty_the_chart() {
+        let mut a = busy_song(128, 40, 14);
+        let plain = choose_slots(&a, &DIFFICULTIES[0]).len();
+        // one slot forty times as loud as anything else
+        let top = *a.slots.iter().max().unwrap();
+        a.slots[40] = top * 40;
+        let with_hit = choose_slots(&a, &DIFFICULTIES[0]).len();
+        assert!(with_hit * 10 >= plain * 9, "{plain} targets fell to {with_hit}");
+    }
+
+    #[test]
+    fn a_quiet_opening_still_gets_targets() {
+        // the first half at a tenth of the loudness of the second
+        let mut a = busy_song(128, 60, 15);
+        let half = a.slots.len() / 2;
+        for v in a.slots[..half].iter_mut() {
+            *v /= 10;
+        }
+        let c = chart("test", &a, 0, 1);
+        let first = c.targets[0].t;
+        assert!(first < 4_000_000, "Easy's first target waits until {first} us");
+        let early = c.targets.iter().filter(|t| t.t < a.length_us / 2).count();
+        assert!(
+            early * 3 >= c.targets.len(),
+            "{early} of {} targets in the quiet half",
+            c.targets.len()
+        );
     }
 
     #[test]

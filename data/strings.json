@@ -1,6 +1,6 @@
 {
   "title": "Countless Days",
-  "intro": "Press each target as its ring closes. Aim with the mouse or a pen; press with a click or a press key (Z and X to start, changed in Settings). On a touch screen, tap the target.",
+  "intro": "Press each circle as its ring closes in, right on the beat. Aim with the mouse; press with a click or your keys (Z and X to start, any keys you like in Settings). On a touch screen, tap. Host a lobby to play with friends.",
   "menu.play": "Play",
   "menu.settings": "Settings",
   "menu.back": "Back",
@@ -129,5 +129,9 @@
   "paste.joiner_note": "Paste the whole code, then press Enter.",
   "paste.your_reply": "Your reply code",
   "paste.reply_note": "Send this back to the host.",
-  "paste.host_instead": "Host by invite code instead"
+  "paste.host_instead": "Host by invite code instead",
+  "title.songs": "{n} songs, five difficulties each, by {makers}, and a few of our own.",
+  "title.and": "and",
+  "title.tagline": "A rhythm game on the album countless days in ableton.",
+  "title.how": "How to play"
 }

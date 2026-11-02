@@ -15,6 +15,10 @@ The state measured rather than recalled, so later changes can be compared with i
 | Targets per chart (Easy to Master) | `data/charts/index.json` | placeholder-1: 27, 87, 141, 175, 202; -2: 38, 111, 138, 240, 282; -3: 43, 123, 155, 255, 276; -4: 47, 77, 160, 238, 267; -5: 51, 86, 207, 293, 325 | 2026-11-02 |
 | Frame times on the densest chart (BO-11) | `.venv/bin/python tests/browser/probe_frames.py chromium firefox webkit` | placeholder-5 Master, 325 targets, 15 s with presses: Chromium median 16.7 ms, 99th 16.8, 0 over 20 ms (also with `--disable-gpu`); Firefox median 8.3 ms, 99th 16.7, 8 over 20 ms; WebKit median 17.0, 99th 19.0, 0 over 20 ms. Headless, on a MacBook Pro (M2 Max) | 2026-11-02 |
 
+| Album tempos (found) | `./target/release/chart analyse` | bunko carnival 160, BoneCereal 171.97, Grunge Dome 150.34, Lime Cruncher 120, Monke Walkin' 160, Vamos's Den 124.61, Ballad Of Mr Nasty 119.91, Space Tsunami 109.78, :) 120, Baped Out 119.98 | 2026-11-02 |
+| Decoder start per engine (R6.6) | `tests/browser/decode.py` | Chromium = ffmpeg; Firefox and WebKit +11.0 ms on the album (Grunge Dome +10.4); WebKit -13.1 ms on our own five | 2026-11-02 |
+| WebAssembly size | `./scripts/build.sh` | 864 KB with ed25519-dalek and sha2 | 2026-11-02 |
+
 ## Not measured
 
 Devices, browsers and conditions no measurement here covers.

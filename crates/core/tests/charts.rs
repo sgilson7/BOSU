@@ -38,13 +38,41 @@ fn songs() -> Vec<(catalog::Song, Analysis, Vec<Chart>)> {
 }
 
 #[test]
-fn there_are_five_songs_with_five_charts_each() {
+fn the_album_s_ten_tracks_and_five_of_our_own_have_five_charts_each() {
     let all = songs();
-    assert_eq!(all.len(), 5);
+    let album = all.iter().filter(|(s, _, _)| s.by != "BOSU").count();
+    assert_eq!((album, all.len()), (10, 15));
     let index = catalog::parse_index(&read("data/charts/index.json")).expect("index");
-    assert_eq!(index.songs.len(), 5);
+    assert_eq!(index.songs.len(), 15);
     for s in &index.songs {
         assert_eq!(s.charts.len(), 5, "{}", s.id);
+    }
+}
+
+#[test]
+fn no_name_the_person_asked_to_keep_out_is_in_the_game() {
+    // a friend's real name was replaced by "boyetano" (R6.5); the words are
+    // spelled in pieces so this file does not hold them either
+    let banned = [
+        ["C", "ay"].concat() + " " + "Wagner",
+        ["c", "ay"].concat() + "-wagner",
+    ];
+    for dir in ["data", "web"] {
+        let mut stack = vec![root().join(dir)];
+        while let Some(d) = stack.pop() {
+            for e in fs::read_dir(&d).unwrap() {
+                let p = e.unwrap().path();
+                if p.is_dir() {
+                    stack.push(p);
+                    continue;
+                }
+                let bytes = fs::read(&p).unwrap();
+                let text = String::from_utf8_lossy(&bytes).to_lowercase();
+                for b in &banned {
+                    assert!(!text.contains(&b.to_lowercase()), "{} names {b}", p.display());
+                }
+            }
+        }
     }
 }
 

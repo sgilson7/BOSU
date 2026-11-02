@@ -36,7 +36,11 @@ Countless Days: an original browser rhythm game, press each target as its ring c
 
 - `./scripts/check.sh`: prints `BUILDER CHECK PASSED`.
 - New songs: put the MP3 in `web/audio/`, list it in `data/songs.json`, then `cargo run --release -p chart_tool -- analyse` and `-- charts`. `-- check` says whether the charts are stale.
-- `tools/placeholders/make.sh`: remakes the placeholder songs (needs ffmpeg).
+- `tools/placeholders/make.sh`: remakes our five songs (needs ffmpeg).
+- `python3 tools/songs/strip_tags.py SRC.mp3 web/audio/ID.mp3`: a new song without its tags; then add it to `data/songs.json` and run the chart tool.
+- `./target/release/chart stability`: each song's tempo from its halves (R6.4).
+- `python3 tools/art/art.py`: redraws the landing picture and icon (needs TeX).
+- `.venv/bin/python tests/browser/decode.py`: every song decodes in each engine, and the shift the core applies there.
 - `.venv/bin/python tests/browser/probe_frames.py chromium firefox webkit`: frame times (BO-11).
 - `python3 scripts/break_tests.py`: every break caught.
 - `.venv/bin/python tests/browser/online.py chromium firefox webkit`: two browsers by pasted codes, on the origin: lobby, scores and a ledger record crossing.
@@ -63,7 +67,9 @@ Every `SECOND-ORDER.md` row with status *person*, by number, with what the perso
 - R2.4: the plan's questions, BO-Q12 to BO-Q17. Answered 2026-11-02.
 - R3.1: the five audio files: downloads turned on for each track, or the files in BrowserOSU/songs/ (BO-Q18).
 - R3.11: whether Easy is busy enough, after playing it.
-- R3.12: the placeholder songs' titles, which go when the real songs arrive.
+- R6.1: the names of our five extra songs, if you want others.
+- R6.4: Grunge Dome and Space Tsunami: play them; if the beat is off, give their tempo from Ableton in `data/songs.json` (`bpm_milli`).
+- R6.5: older commits in the public repository still hold the friend's SoundCloud handle; history can be rewritten if you want it gone.
 - R4.4: a lobby with a friend on another network, by hand.
 
 ## Mistakes so far

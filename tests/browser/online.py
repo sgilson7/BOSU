@@ -135,10 +135,11 @@ def run(p, engine, origin):
     host.locator("#members p", has_text=joiner_line).wait_for(timeout=TIMEOUT_MS)
     check(host.locator("#members p").count() == 2, "the host lists two players")
 
-    # the host picks Placeholder 2 on Hard; the joiner sees it
+    # the host picks the second song on Hard; the joiner sees it
     host.click("button[data-action='song.pick'][data-value='1']")
     host.click("button[data-action='difficulty.pick'][data-value='hard']")
-    want = STRINGS["lobby.chosen"].replace("{song}", "Placeholder 2").replace("{difficulty}", STRINGS["difficulty.hard"])
+    second = json.loads((ROOT / "data" / "charts" / "index.json").read_text())["songs"][1]["title"]
+    want = STRINGS["lobby.chosen"].replace("{song}", second).replace("{difficulty}", STRINGS["difficulty.hard"])
     joiner.locator("#chosen p", has_text=want).wait_for(timeout=TIMEOUT_MS)
     check(True, f"the joiner sees the host's pick: {want}")
     check(host.is_disabled("button[data-action='lobby.start']"), "Start waits for the joiner's Ready")

@@ -159,6 +159,9 @@ def test_driver(t, pack):
     cfg["style"] = str(pack)
     (proj / "data" / "art.json").write_text(json.dumps(cfg))
     (pack / "palette.json").write_text(json.dumps({"ink": "#102030", "roleA": "#a0b0c0"}))
+    # the driver is under test, not the project's own pictures: start the
+    # copy with an empty registry, as a new project has
+    (proj / "tools" / "art" / "pictures.py").write_text("PICTURES = {}\n")
     cmd = [sys.executable, str(proj / "tools" / "art" / "art.py"), "--check-only"]
     r = subprocess.run(cmd, capture_output=True, text=True)
     ok(r.returncode == 0, "art.py --check-only passes with no pictures")

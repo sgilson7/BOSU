@@ -137,6 +137,10 @@ pub const REQUIRED: &[&str] = &[
     "paste.your_reply",
     "paste.reply_note",
     "paste.host_instead",
+    "title.songs",
+    "title.and",
+    "title.tagline",
+    "title.how",
 ];
 
 pub type Strings = BTreeMap<String, String>;

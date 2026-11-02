@@ -1,0 +1,58 @@
+\documentclass[tikz,border=0pt]{standalone}
+\usepackage{xcolor}
+\definecolor{butter}{HTML}{F5DA92}
+\definecolor{cloud}{HTML}{F2D58A}
+\definecolor{coral}{HTML}{E47A7E}
+\definecolor{coraldk}{HTML}{C85F65}
+\definecolor{cream}{HTML}{FFF6E0}
+\definecolor{dark}{HTML}{4A3357}
+\definecolor{darkhi}{HTML}{5E4A6E}
+\definecolor{forest}{HTML}{5E9C6A}
+\definecolor{glass}{HTML}{A9D3C9}
+\definecolor{gold}{HTML}{FFB000}
+\definecolor{golddk}{HTML}{D9962A}
+\definecolor{greenA}{HTML}{8DBB7E}
+\definecolor{greenB}{HTML}{6FA77A}
+\definecolor{greenC}{HTML}{A9C97F}
+\definecolor{greenD}{HTML}{5E9C6A}
+\definecolor{ground}{HTML}{D3A77D}
+\definecolor{ink}{HTML}{3B2340}
+\definecolor{lilac}{HTML}{D9C3E0}
+\definecolor{metal}{HTML}{8D9A93}
+\definecolor{metaldark}{HTML}{5E6B66}
+\definecolor{mint}{HTML}{C5E0B4}
+\definecolor{orange}{HTML}{F26B38}
+\definecolor{paper}{HTML}{F6E7C4}
+\definecolor{pink}{HTML}{F2A7B5}
+\definecolor{plum}{HTML}{8A5A9E}
+\definecolor{plumhi}{HTML}{A77BB8}
+\definecolor{sage}{HTML}{8DBB7E}
+\definecolor{salmon}{HTML}{F4BE9C}
+\definecolor{sky}{HTML}{EFC46A}
+\definecolor{skyhi}{HTML}{F5DA92}
+\definecolor{skylow}{HTML}{E9B060}
+\definecolor{stone}{HTML}{E7C9A0}
+\definecolor{tan}{HTML}{E2BD8C}
+\definecolor{teal}{HTML}{4FA3A0}
+\definecolor{wallA}{HTML}{E88A73}
+\definecolor{wallB}{HTML}{EE9F7E}
+\definecolor{wallC}{HTML}{E47A7E}
+\definecolor{wallD}{HTML}{F0B07E}
+\definecolor{wallE}{HTML}{D9765F}
+\definecolor{wallF}{HTML}{E99A8A}
+\definecolor{windark}{HTML}{8C5A64}
+\definecolor{window}{HTML}{F6E7A0}
+\definecolor{wood}{HTML}{B9835A}
+\definecolor{wooddk}{HTML}{8E5E3C}
+\newlength{\Ink}\setlength{\Ink}{1.8pt}
+\tikzset{inked/.style={draw=ink,line width=\Ink,line join=round,line cap=round}}
+\begin{document}
+\begin{tikzpicture}
+\useasboundingbox (0,0) rectangle (2,2);
+\clip (0,0) rectangle (2,2);
+\filldraw[inked,fill=sky,rounded corners=0.35cm] (0.06,0.06) -- (1.94,0.06) -- (1.94,1.94) -- (0.06,1.94) -- cycle;
+\draw[draw=ink,line width=1.2pt,line cap=round,line join=round] plot[smooth cycle, tension=0.5] coordinates {(1.735,1) (1.71,1.19) (1.637,1.367) (1.52,1.52) (1.368,1.637) (1.19,1.71) (1,1.735) (0.81,1.71) (0.633,1.637) (0.48,1.52) (0.363,1.367) (0.29,1.19) (0.265,1) (0.29,0.81) (0.363,0.632) (0.48,0.48) (0.632,0.363) (0.81,0.29) (1,0.265) (1.19,0.29) (1.368,0.363) (1.52,0.48) (1.637,0.632) (1.71,0.81)};
+\filldraw[inked,fill=coral] (1,1) circle (0.42);
+\filldraw[inked,fill=cream] (0.866,1.134) circle (0.076);
+\end{tikzpicture}
+\end{document}

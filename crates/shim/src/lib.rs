@@ -113,6 +113,13 @@ impl Game {
         self.inner.wire_error(key)
     }
 
+    /// The song's first seconds as this browser decoded them: samples from
+    /// -1 to 1, turned into 16-bit integers for the core.
+    pub fn audio_head(&mut self, url: &str, samples: Vec<f32>, rate: f64) {
+        let ints: Vec<i16> = samples.iter().map(|x| (x * 32767.0) as i16).collect();
+        self.inner.audio_head(url, &ints, rate as i64)
+    }
+
     pub fn scoring(&self) -> u32 {
         self.inner.scoring()
     }

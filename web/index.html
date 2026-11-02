@@ -11,9 +11,13 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' wss://nos.lol wss://nostr.mom wss://nostr-01.yakihonne.com wss://nostr.sathoarder.com wss://relay.mostro.network; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Countless Days</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="art/icon.png">
 </head>
 <body data-ready="false" data-screen="title" data-canvas="false">
   <canvas id="field" aria-label="Playfield"></canvas>
+  <!-- The landing picture (tools/art/pictures.py, "title"); the title screen
+       sets its words over the calm sky at the upper left. -->
+  <div id="hero"><img src="art/title.png" alt="A street of bright buildings under a yellow sky, with bunting, a giant purple boombox on the pavement, and coloured circles with rings floating above it like balloons."></div>
   <main>
     <h1 id="title"></h1>
     <div id="panels"></div>

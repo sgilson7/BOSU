@@ -73,6 +73,10 @@ async function loadAudio(url) {
       if (!response.ok) throw new Error(response.statusText);
       decoded.set(url, await audio.ctx.decodeAudioData(await response.arrayBuffer()));
     }
+    // the core checks where this browser's decode starts against the build's
+    const buffer = decoded.get(url);
+    const head = buffer.getChannelData(0).subarray(0, buffer.sampleRate * assets.head_seconds);
+    game.audio_head(url, head, buffer.sampleRate);
     act("audio.ready", url);
   } catch (e) {
     act("load.failed", e.message);

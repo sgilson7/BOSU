@@ -369,5 +369,61 @@
     "find": "            for (_, player) in order.iter().skip(MAX_PER_CHART) {",
     "replace": "            for (_, player) in order.iter().skip(MAX_PER_CHART * 9) {",
     "test": "the_ledger_drops_replays_below_the_top_100_and_records_below_200"
+  },
+  {
+    "name": "the floor ignores one huge hit",
+    "file": "crates/core/src/generate.rs",
+    "find": "    let floor = strong * FLOOR_PCT / 100;",
+    "replace": "    let floor = sorted.last().copied().unwrap_or(0) as u64 * FLOOR_PCT / 100;",
+    "test": "one_huge_hit_does_not_empty_the_chart"
+  },
+  {
+    "name": "a whole-number tempo is preferred",
+    "file": "crates/core/src/beats.rs",
+    "find": "if whole_score * 100 >= best * WHOLE_BPM_PCT {",
+    "replace": "if false {",
+    "test": "a_whole_number_tempo_is_found_exactly"
+  },
+  {
+    "name": "a browser's decode shift moves song time",
+    "file": "crates/core/src/game.rs",
+    "find": "        let t = heard - start - offset + self.audio_shift_us;",
+    "replace": "        let t = heard - start - offset;",
+    "test": "a_browser_that_trims_the_song_s_start_is_moved_back_onto_the_chart"
+  },
+  {
+    "name": "a shift past the limit is ignored",
+    "file": "crates/core/src/game.rs",
+    "find": "(expected - here).abs() <= MAX_SHIFT_US",
+    "replace": "true",
+    "test": "a_browser_that_trims_the_song_s_start_is_moved_back_onto_the_chart"
+  },
+  {
+    "name": "the first sound is a strong attack",
+    "file": "crates/core/src/beats.rs",
+    "find": "(*s as i32).abs() * FIRST_SOUND_SHARE >= peak",
+    "replace": "(*s as i32).abs() > 0",
+    "test": "a_browser_that_trims_the_song_s_start_is_moved_back_onto_the_chart"
+  },
+  {
+    "name": "each maker is credited once",
+    "file": "crates/core/src/game.rs",
+    "find": "if s.by != OUR_OWN && !makers.contains(&s.by) {",
+    "replace": "if s.by != OUR_OWN {",
+    "test": "the_title_credits_each_maker_once_and_not_our_own"
+  },
+  {
+    "name": "a given tempo is kept",
+    "file": "crates/core/src/beats.rs",
+    "find": "    if let Some(bpm) = bpm_milli.filter(|b| *b > 0) {",
+    "replace": "    if let Some(bpm) = bpm_milli.filter(|b| *b < 0) {",
+    "test": "a_given_tempo_is_kept_and_only_the_first_beat_is_found"
+  },
+  {
+    "name": "targets are shared out by phrase",
+    "file": "crates/core/src/generate.rs",
+    "find": "    let phrase_slots = (PHRASE_BEATS * SLOTS_PER_BEAT) as usize;",
+    "replace": "    let phrase_slots = usize::MAX / 2;",
+    "test": "a_quiet_opening_still_gets_targets"
   }
 ]

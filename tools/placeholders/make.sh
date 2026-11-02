@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Makes the five placeholder songs (R2.1, BO-Q12: A) with ffmpeg's own
+# Makes the five songs of our own (first placeholders, R2.1; named in R6.1) with ffmpeg's own
 # synthesiser: kick, snare, hats and a bass line at five tempos. They stand
 # in until the album's tracks arrive (R3.1) and are this project's own work
 # (LICENSES.md). Run from the repository root:  tools/placeholders/make.sh
@@ -9,11 +9,11 @@ command -v ffmpeg >/dev/null || { echo "needs ffmpeg (brew install ffmpeg)" >&2;
 
 # id, beats a minute, seconds, root note in Hz
 songs=(
-  "placeholder-1 100 70 55"
-  "placeholder-2 118 75 49"
-  "placeholder-3 132 80 61.74"
-  "placeholder-4 150 80 58.27"
-  "placeholder-5 172 85 46.25"
+  "sunrise-on-the-ganges 100 70 55"
+  "3000-jelly 118 75 49"
+  "disco-satellite 132 80 61.74"
+  "velvet-moped 150 80 58.27"
+  "neon-cassette-shuffle 172 85 46.25"
 )
 for s in "${songs[@]}"; do
   read -r id bpm secs root <<<"$s"
@@ -32,6 +32,8 @@ for s in "${songs[@]}"; do
   fade="min(1,($secs-t)/2)"
   ffmpeg -loglevel error -y -f lavfi \
     -i "aevalsrc=exprs='($kick+$snare+$hats+$sixteenths+$bass)*0.7*$fade':s=44100:d=$secs" \
-    -ac 1 -codec:a libmp3lame -b:a 128k "web/audio/$id.mp3"
+    -ac 1 -codec:a libmp3lame -b:a 128k "web/audio/$id.tagged.mp3"
+  python3 tools/songs/strip_tags.py "web/audio/$id.tagged.mp3" "web/audio/$id.mp3"
+  rm "web/audio/$id.tagged.mp3"
   echo "web/audio/$id.mp3  $bpm bpm  $secs s"
 done

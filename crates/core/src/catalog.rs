@@ -20,6 +20,10 @@ pub struct Song {
     /// The audio file, relative to the page.
     pub audio: String,
     pub seed: u64,
+    /// The tempo from the song's project, in thousandths of a beat a minute,
+    /// when the beat finder should not guess it (R6.4).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bpm_milli: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -48,6 +52,9 @@ pub struct IndexSong {
     pub audio_hash: String,
     pub bpm_milli: i64,
     pub length_us: i64,
+    /// Where the build's decode first hears sound (`beats::first_sound_us`).
+    #[serde(default)]
+    pub first_sound_us: i64,
     pub charts: Vec<ChartEntry>,
 }
 
@@ -152,6 +159,7 @@ pub fn index(
                 audio_hash: ah.clone(),
                 bpm_milli: a.bpm_milli(),
                 length_us: a.length_us,
+                first_sound_us: a.first_sound_us,
                 charts: cs
                     .iter()
                     .enumerate()
