@@ -71,3 +71,9 @@ The last lines of `./scripts/check.sh` and `./scripts/count-tests.sh`, with the 
 ## The next action
 
 One action.
+
+## Deploys
+
+| Date | Commit | Address | Checks |
+| --- | --- | --- | --- |
+| 2026-11-02 | cb035fb (build e6d82e8f9f77) | https://sgilson7.github.io/BOSU/ | `./scripts/check.sh` passed before publishing; `BUILDER_ORIGIN=https://sgilson7.github.io/BOSU tests/browser/check.py` passed in chromium, firefox, webkit, webkit-iphone, webkit-ipad. Solo game on placeholder songs (BO-Q17: A). Not checked: real audio latency on a person's machine, a real phone. |
