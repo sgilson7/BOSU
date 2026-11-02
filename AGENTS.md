@@ -37,7 +37,20 @@
 
 ## Rules agreed for this project
 
-None yet. When the person answers the opening entry's questions, add each rule that applies to every later session here, with its journal ID.
+Agreed 2026-11-02 in the journal's opening entry (BO-Q1 to BO-Q11 answered; agreed entry `2026-11-02-agreed`).
+
+- BO-1: Every game rule (timing windows, scoring, combo, accuracy, chart loading, beat finding, chart generation, the lobby, the ledger) is in the core; the page draws and calls `act`.
+- BO-2: Hits are judged against the audio clock, in microseconds; the same presses give the same judgements at any frame rate.
+- BO-3: An original game in the genre: no osu! name, skin, sound, file format or scoring table anywhere in the repository or on the page. The game is called Countless Days (BO-Q1); the repository is BOSU.
+- BO-4: Every committed chart is cleared by a perfect bot with all Perfect.
+- BO-5: Each difficulty is harder than the one below it on the same song.
+- BO-6: A chart is the same every time it is generated from the same song and seed; charts are generated at build time and committed, never in the browser.
+- BO-7: Nothing leaves the origin until Host, Join or an invite link's Join is pressed; relays are named only in `web/net/config.js` and the CSP.
+- BO-8: Lobby members start the same chart and end with each other's final scores; garbage or another build on the wire changes only the status.
+- BO-9: Each judgement is shown by a word and a shape as well as a colour.
+- BO-10: Names a player reads are the person's to approve; a generated list is a worklist row.
+- BO-11: 60 frames a second on the densest chart on a laptop without a graphics card is measured by a probe, written in `MEASUREMENTS.md`.
+- BO-12: Each visible change gets a journal entry with pictures of the running build.
 
 ## Stopping
 

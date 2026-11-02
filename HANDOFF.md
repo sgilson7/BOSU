@@ -32,7 +32,9 @@ Every `SECOND-ORDER.md` row with status *person*, by number, with what the perso
 
 - R1.2: the five audio files and their titles (BO-Q2).
 - R1.3: the album makers' agreement, in your words, for `LICENSES.md`.
-- R1.6: the opening entry's questions, BO-Q1 to BO-Q11.
+- R1.6: the opening entry's questions, BO-Q1 to BO-Q11. Answered 2026-11-02.
+- R2.1: the exact SoundCloud playlist link, with downloads on (BO-Q12, T1).
+- R2.4: the plan's questions, BO-Q12 to BO-Q17.
 
 ## Mistakes so far
 
