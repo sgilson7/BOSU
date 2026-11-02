@@ -56,6 +56,18 @@ A target with a path: press on it, keep the cursor on the moving point until the
 
 Not: slider
 
+### Ledger
+
+The scores your browser keeps from every player whose plays have reached it, one best per player per chart. Playing in a lobby swaps the scores each browser lacks, so scores travel from friend to friend.
+
+Not: blockchain, chain
+
+### Lobby
+
+A room where friends play the same chart at once, each on their own screen, with each other's scores down the side. The host picks the song and starts; the others press Ready.
+
+Not: party, server
+
 ### Miss
 
 A target never pressed inside its window. It ends the combo and earns nothing.
@@ -63,6 +75,14 @@ A target never pressed inside its window. It ends the combo and earns nothing.
 ### Perfect
 
 A hit inside the narrowest window around the beat.
+
+### Record
+
+One finished play in the ledger: who played, which chart, the score, and the presses that made it, signed with the player's key.
+
+### Room code
+
+The six letters and digits that name a lobby. The invite link carries it after #room=.
 
 ### Score
 

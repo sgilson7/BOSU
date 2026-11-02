@@ -73,4 +73,7 @@ These stay with the person and go in `BRIEF.md` or `PLAN.md`:
 | D7 | The page scan skips media files under `web/` (`MEDIA` in `boundary.rs`: mp3, png, jpg, webp); every other file must still be text and is still scanned | the songs are MP3 files, which hold no script and no address | R3.6 |
 | D3 | `web/render2d.js` sizes its backing store to the canvas's displayed size and scales the playfield to fit, and gains `circle` and `alpha` ops | a rhythm game fills the window; targets are circles that fade in | `crates/core/src/draw.rs` tests; R3.5 |
 | D11 | Unchanged so far: release `opt-level = "s"`. The frame probe (BO-11) shows no frame over 20 ms at this level | | MEASUREMENTS.md |
+| D1 | The core allowlist adds `ed25519-dalek` and `sha2` | ledger records are signed (BO-Q13: B, T3) | `boundary.rs`; R5.1 |
+| D3, D4, page scan | `web/net/` holds the online transport: `config.js` may hold timings and the relay addresses, `rtc.js` may name the WebRTC and WebSocket APIs, and `connect-src` lists the relays in `config.js` | online play is in the brief (kits/online) | `crates/core/tests/online_fence.rs`; R5.4 |
+| D23 | No rollback session: the lobby shares its state and scores, each player plays their own copy | a rhythm game has no shared world to roll back (R1.4) | `online.rs` tests |
 | — | A third workspace crate, `crates/chart_tool`, does input and output at build time (ffmpeg, files) and holds no rule | charts are generated at build time and committed (BO-6) | PLAN.md decision 11 |

@@ -8,7 +8,7 @@
        media-src blob: is not needed, the song is decoded from a fetch;
        form-action 'none' blocks form posts. A meta policy cannot stop data
        leaving by navigation, so the browser check still watches requests. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' wss://nos.lol wss://nostr.mom wss://nostr-01.yakihonne.com wss://nostr.sathoarder.com wss://relay.mostro.network; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Countless Days</title>
   <link rel="stylesheet" href="style.css">
 </head>

@@ -292,5 +292,82 @@
     "find": "        1 => {\n            let settings",
     "replace": "        9 => {\n            let settings",
     "test": "a_version_one_save_keeps_its_settings_and_gets_z_and_x"
+  },
+  {
+    "name": "another build is let in",
+    "file": "crates/core/src/online.rs",
+    "find": "if protocol != PROTOCOL || build != self.build {",
+    "replace": "if protocol != PROTOCOL {",
+    "test": "another_build_or_protocol_is_turned_away_with_a_reason"
+  },
+  {
+    "name": "the lobby holds eight",
+    "file": "crates/core/src/online.rs",
+    "find": "if self.role == Role::Host && self.admitted().len() + 1 >= LOBBY_SEATS {",
+    "replace": "if false {",
+    "test": "a_ninth_is_told_the_lobby_is_full"
+  },
+  {
+    "name": "the host stamps who scored",
+    "file": "crates/core/src/online.rs",
+    "find": "                    s.player = self.peers[&peer]",
+    "replace": "                    s.player = s.player.clone() + &self.peers[&peer]",
+    "test": "a_joiner_cannot_post_a_score_as_someone_else"
+  },
+  {
+    "name": "start waits for every ready",
+    "file": "crates/core/src/online.rs",
+    "find": "self.role == Role::Host && self.peers.values().filter(|s| s.hello.is_some()).all(|s| s.ready)",
+    "replace": "self.role == Role::Host",
+    "test": "the_host_waits_for_every_ready"
+  },
+  {
+    "name": "a stranger's message is garbage",
+    "file": "crates/core/src/online.rs",
+    "find": "            _ if !said_hello => self.status = GARBLED,",
+    "replace": "",
+    "test": "a_peer_that_has_not_said_hello_changes_nothing"
+  },
+  {
+    "name": "signatures are checked",
+    "file": "crates/core/src/ledger.rs",
+    "find": "    if !verify_signature(r) {",
+    "replace": "    if false && !verify_signature(r) {",
+    "test": "a_record_with_a_bad_signature_is_refused"
+  },
+  {
+    "name": "replays are checked",
+    "file": "crates/core/src/ledger.rs",
+    "find": "    let same = p.score == b.score",
+    "replace": "    let same = true || p.score == b.score",
+    "test": "a_record_whose_score_does_not_match_its_replay_is_refused"
+  },
+  {
+    "name": "a replay must match its hash",
+    "file": "crates/core/src/ledger.rs",
+    "find": "    if sha256_hex(r.replay.as_bytes()) != b.replay_hash {",
+    "replace": "    if false {",
+    "test": "a_record_whose_score_does_not_match_its_replay_is_refused"
+  },
+  {
+    "name": "a worse record never replaces a better",
+    "file": "crates/core/src/ledger.rs",
+    "find": "            Some(e) if !beats(&r, &e.record) => false,",
+    "replace": "",
+    "test": "a_worse_record_never_replaces_a_better_one"
+  },
+  {
+    "name": "replays are kept for the top 100",
+    "file": "crates/core/src/ledger.rs",
+    "find": "                if rank < REPLAYS_PER_CHART && used + size <= REPLAY_BUDGET {",
+    "replace": "                if used + size <= REPLAY_BUDGET {",
+    "test": "the_ledger_drops_replays_below_the_top_100_and_records_below_200"
+  },
+  {
+    "name": "records are kept for the top 200",
+    "file": "crates/core/src/ledger.rs",
+    "find": "            for (_, player) in order.iter().skip(MAX_PER_CHART) {",
+    "replace": "            for (_, player) in order.iter().skip(MAX_PER_CHART * 9) {",
+    "test": "the_ledger_drops_replays_below_the_top_100_and_records_below_200"
   }
 ]

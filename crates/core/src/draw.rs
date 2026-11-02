@@ -265,6 +265,8 @@ pub fn assets() -> String {
         "tau_milli": 6284,
         "us_per_s": 1_000_000,
         "percent": 100,
+        // how many random bytes the page draws at load (together.rs)
+        "random_bytes": 48,
         // what `game::input` takes: the kind of event, and a button per key
         "kinds": {"move": 0, "press": 1, "release": 2},
         "mouse": 0,

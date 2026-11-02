@@ -97,6 +97,26 @@ impl Game {
         self.inner.draw()
     }
 
+    pub fn wire_peer(&mut self, peer: u32) {
+        self.inner.wire_peer(peer)
+    }
+
+    pub fn wire_left(&mut self, peer: u32) {
+        self.inner.wire_left(peer)
+    }
+
+    pub fn wire_message(&mut self, peer: u32, text: &str) {
+        self.inner.wire_message(peer, text)
+    }
+
+    pub fn wire_error(&mut self, key: &str) {
+        self.inner.wire_error(key)
+    }
+
+    pub fn scoring(&self) -> u32 {
+        self.inner.scoring()
+    }
+
     pub fn judged(&self) -> u32 {
         self.inner.judged()
     }

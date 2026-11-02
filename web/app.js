@@ -9,6 +9,7 @@
 import init, { Game, draw_assets } from "./pkg/tool_shim.js";
 import { createRenderer } from "./render2d.js";
 import * as store from "./save/store.js";
+import { makeOnline } from "./online.js";
 
 const el = (id) => document.getElementById(id);
 const make = (tag, text) => {
@@ -18,6 +19,7 @@ const make = (tag, text) => {
 };
 
 let game = null;
+let online = null;
 let assets = null;
 let renderer = null;
 let ui = null;
@@ -53,11 +55,11 @@ function act(name, value = "") {
   runCommands();
 }
 
-async function loadChart(url) {
+async function loadChart(url, then) {
   try {
     const response = await fetch(url);
     if (!response.ok) throw new Error(response.statusText);
-    act("chart.loaded", await response.text());
+    act(then, await response.text());
   } catch (e) {
     act("load.failed", e.message);
   }
@@ -106,7 +108,7 @@ async function startClicks(c) {
 }
 
 const handlers = {
-  load_chart: (c) => loadChart(c.url),
+  load_chart: (c) => loadChart(c.url, c.check ? "check.chart" : "chart.loaded"),
   load_audio: (c) => loadAudio(c.url),
   start_audio: (c) => startAudio(c.url, c.at_us),
   stop_audio: () => stopAll(),
@@ -119,6 +121,13 @@ const handlers = {
   },
   ui: () => render(),
   store: (c) => store.write(c.text),
+  wire_open: (c) => online.open(c),
+  wire_invitation: () => online.invitation(),
+  wire_reply: (c) => online.reply(c.text),
+  wire_accept: (c) => online.accept(c.text),
+  wire_close: () => online.close(),
+  send: (c) => online.send(c.peer, c.text),
+  copy: (c) => navigator.clipboard && navigator.clipboard.writeText(c.text).catch(() => {}),
   keep_refused: (c) => store.keepRefused(c.text),
 };
 
@@ -158,16 +167,31 @@ function button(a) {
 
 function field(f) {
   const label = make("label", f.label);
-  const input = make("input");
-  input.type = "text";
+  const input = make(f.multiline ? "textarea" : "input");
+  input.id = f.id;
   input.value = f.value;
-  input.maxLength = f.max;
-  input.autocomplete = "nickname";
-  input.addEventListener("change", () => act(f.action, input.value));
+  input.readOnly = f.readonly;
+  if (!f.multiline) {
+    input.type = "text";
+    input.autocomplete = "off";
+  }
+  if (f.max) input.maxLength = f.max;
+  // a one-line field sends when it changes; a code field when Enter is pressed
+  if (f.action && !f.multiline) input.addEventListener("change", () => act(f.action, input.value));
+  if (f.action && f.multiline)
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        act(f.action, input.value);
+      }
+    });
+  if (f.readonly) input.addEventListener("focus", () => input.select());
   label.append(input);
   const box = make("div");
   box.className = "field";
-  box.append(label, make("p", f.note));
+  box.append(label);
+  if (f.note) box.append(make("p", f.note));
+  if (f.readonly) document.body.dataset[f.id === "offer-out" ? "offer" : "answer"] = "ready";
   return box;
 }
 
@@ -205,6 +229,8 @@ function frame() {
   if (ui.canvas) renderer.draw(list);
   const judged = String(game.judged());
   if (document.body.dataset.judged !== judged) document.body.dataset.judged = judged;
+  const scoring = String(game.scoring());
+  if (document.body.dataset.scoring !== scoring) document.body.dataset.scoring = scoring;
   runCommands();
   if (tileSpec && ui.canvas) document.body.dataset.tile = "drawn";
   requestAnimationFrame(frame);
@@ -270,8 +296,13 @@ async function main() {
   game = new Game(strings, glossary, index);
   assets = JSON.parse(draw_assets());
   renderer = createRenderer(el("field"), assets);
+  online = makeOnline(game, runCommands);
   listen();
   act("save.loaded", store.read());
+  // random bytes for the player's key and room codes, and where invites point
+  act("page.random", Array.from(crypto.getRandomValues(new Uint8Array(assets.random_bytes))).join(","));
+  act("page.address", location.origin + location.pathname);
+  act("page.hash", location.hash);
   render();
   if (tileSpec) act("tile.spec", tileSpec);
   document.body.dataset.ready = "true";

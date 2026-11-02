@@ -24,7 +24,7 @@ use crate::game::{Best, Settings};
 
 /// The shape this build writes. Bump it, and add a step to `migrate`,
 /// whenever a field is added, renamed, moved or removed.
-pub const VERSION: u32 = 2;
+pub const VERSION: u32 = 3;
 
 /// Fields an old save holds that a migration removed or changed on purpose,
 /// each with the version that did it and why. Every other field comes back
@@ -49,6 +49,11 @@ pub struct Save {
     pub settings: Settings,
     /// The best play per chart, keyed "song:difficulty".
     pub bests: BTreeMap<String, Best>,
+    /// 32 random bytes in hex, drawn by the page once: the player's signing
+    /// key. Empty until the page's first random bytes arrive.
+    pub secret: String,
+    /// Every player's best per chart that has reached this browser (T2).
+    pub ledger: crate::ledger::Ledger,
 }
 
 /// What came back from the page's storage or a file the player chose.
@@ -88,6 +93,12 @@ fn migrate(from: u32, mut v: Map<String, Value>) -> Option<Map<String, Value>> {
             let fields = settings.as_object_mut()?;
             fields.insert("keys".into(), json!(crate::game::default_keys()));
             fields.insert("mouse_presses".into(), json!(true));
+            Some(v)
+        }
+        // version 3 added the player's key and the ledger (round 5)
+        2 => {
+            v.insert("secret".into(), json!(""));
+            v.insert("ledger".into(), json!({ "boards": {} }));
             Some(v)
         }
         _ => None,
@@ -149,6 +160,8 @@ mod tests {
                 mouse_presses: false,
             },
             bests,
+            secret: "07".repeat(32),
+            ledger: crate::ledger::Ledger::default(),
         }
     }
 
@@ -171,7 +184,7 @@ mod tests {
             (r#"{"bests":{}}"#, UNREADABLE),
             (r#"{"version":99}"#, NEWER),
             (r#"{"version":0}"#, NO_STEP),
-            (r#"{"version":2,"cheat":true}"#, UNREADABLE),
+            (r#"{"version":3,"cheat":true}"#, UNREADABLE),
         ] {
             assert_eq!(
                 load(text),

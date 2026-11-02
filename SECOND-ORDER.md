@@ -33,6 +33,14 @@ One row per assumption, surprise or open item. **Kind** is *divergence* (what wa
 | R3.12 | worklist | The placeholder songs' titles ("Placeholder 1" to "5", "by BOSU"). | Names a player reads are the person's (BO-10); they go when the real songs arrive. | | | person |
 | R3.13 | worklist | The repository is public with no LICENSE file. | Without one, the code is all rights reserved, the safe default; choosing a licence is the person's. | The person chose MIT on 2026-11-02 ("please add mit license"); `LICENSE`. | LICENSE, LICENSES.md | done |
 | R4.1 | divergence | Press keys are Z and X, fixed in the page (`assets.keys`). | The person plays with W, A, S and D in one hand and aims with the other (T4). | Every key goes to the core by its `KeyboardEvent.code`; the press keys, up to eight, live in the save (version 2, migrated from 1), and the mouse can be set to aim only. Codes, not letters, so a key keeps its place on any keyboard layout. | `game.rs` key tests; `tests/saves/v2-wasd.json` | done |
+| R4.2 | divergence | The host's seat passes to the earliest joiner when the host leaves (PLAN.md decision 16). | The transport is a star: joiners link only to the host, so when the host goes there is nobody to hand the lobby to without a new connection. | The lobby closes for everyone with "The host left"; a player mid-round finishes the song alone. | `the_host_leaving_ends_the_lobby_for_joiners_and_a_joiner_leaving_frees_a_seat` | open |
+| R4.3 | finding | Two browsers on different builds could play together. | What must agree is the charts. | The hello carries a hash of the chart index; a browser with other charts is told to reload. | `another_build_or_protocol_is_turned_away_with_a_reason` | done |
+| R4.4 | worklist | The room code over real relays works between two browsers on this machine (`tests/browser/relays.py`, 2026-11-02). | Two people on different networks, and phones on mobile data, have not been tried; two strict NATs would need TURN, which this design has not. | Try it with a friend on another network and say what happens. | | person |
+| R5.1 | divergence | The core keeps `serde` and `serde_json` only (D1); the plan meant to write SHA-256 itself. | BO-Q13: B wants signatures, and a signature scheme is not code to write by hand. | `ed25519-dalek` 2 (no default features; no randomness: the key comes from the page's bytes) and `sha2` 0.10 join the allowlist. The WebAssembly grew from 393 KB to 864 KB. | `ALLOWED_DEPENDENCIES` in `boundary.rs`; BUILDER-SPEC.md | done |
+| R5.2 | divergence | Replays kept for the top 100 per chart (BO-Q14: A). | A replay of a dense chart is about 10 KB; 100 for each of 25 charts is 25 MB, and the browser keeps about 5 MB for this whole site, shared with the other games under sgilson7.github.io. | Replays for the top 100 per chart while all of them fit in 1.5 MB, the best first; past that a record keeps its signature and shows "checked by another player". Only a large group would reach it. | `the_ledger_drops_replays_below_the_top_100_and_records_below_200` | open |
+| R5.3 | divergence | Every player's best per chart (BO-Q14: A). | Without a cap the save outgrows the browser's storage at a few thousand players. | The best 200 players per chart are kept. | same test | open |
+| R5.4 | finding | The online kit's fence allows no page JavaScript in a subdirectory. | The saves kit puts `store.js` in `web/save/`, and the page scan reads it. | The fence names it in `OTHER_KITS_JS`, and skips media files as the page scan does. | `online_fence.rs` | done |
+| R5.5 | finding | A record can be checked on arrival. | Its chart may not be loaded; checking needs it. | A record with a replay waits while the page fetches its chart, then is checked; a record for a chart this build lacks is kept, marked, and never shown on this build's boards. | `check_pending` in `together.rs`; `tests/browser/online.py` | done |
 
 ## Strings written by the agent
 
@@ -101,3 +109,73 @@ Each reader-visible string the agent wrote, with its key, for the person to read
 | `save.unreadable` | Your saved scores and settings could not be read. They are kept in this browser; a new save has started. |
 | `save.newer` | Your saved scores come from a newer version of the game. They are kept in this browser; a new save has started. |
 | `save.no_step` | Your saved scores come from a version this one cannot update. They are kept in this browser; a new save has started. |
+| `settings.keys` | Press keys: {keys} |
+| `settings.keys.none` | No press keys. Add one, or press with the mouse. |
+| `settings.keys.add` | Add a key |
+| `settings.keys.remove` | Remove {key} |
+| `settings.keys.reset` | Back to Z and X |
+| `settings.keys.listening` | Press the key to add. Escape cancels. |
+| `settings.keys.taken` | {key} is a press key already. |
+| `settings.keys.full` | You have {n} press keys. Remove one to add another. |
+| `settings.mouse.on` | A click presses as well as aiming. |
+| `settings.mouse.off` | The mouse only aims; press with your keys. |
+| `settings.mouse.turn_off` | Mouse aims only |
+| `settings.mouse.turn_on` | Mouse presses too |
+| `menu.host` | Host a lobby |
+| `menu.join` | Join a lobby |
+| `play.standing` | {score} · {n} combo |
+| `results.lobby` | Back to the lobby |
+| `results.standings` | This round |
+| `results.standing.done` | {rank}. {name}: {score}, {accuracy} |
+| `results.standing.playing` | {rank}. {name}: {score}, still playing |
+| `board.heading` | Leaderboard |
+| `board.empty` | No scores yet on this chart. Finish a play, or play with friends to bring theirs here. |
+| `board.row` | {rank}. {name}: {score}, {accuracy} · {mark} |
+| `board.you` | you |
+| `board.replayed` | replayed here |
+| `board.signed` | checked by another player |
+| `board.count` | Players on this chart in your ledger: {n}. |
+| `online.anonymous` | Player {id} |
+| `online.connecting` | Connecting to the host. |
+| `online.waiting` | Waiting for players. Send them the invite link. |
+| `online.in_lobby` | Connected. |
+| `online.reload` | The other player has a different version of the game. Reload the page, then join again. |
+| `online.garbled` | A message from another player could not be read; play goes on. |
+| `online.full` | That lobby is full. |
+| `online.host_left` | The host left, so the lobby has closed. |
+| `online.left` | You left the lobby. |
+| `online.no_relay` | No relay answered, so no one could be found. Try again, or invite by code. |
+| `online.no_path` | Your browsers could not reach each other directly. Try another network, or invite by code. |
+| `online.signal_failed` | The connection could not be set up. Try again. |
+| `online.bad_code` | That is not an invite code from this game. Copy the whole code and paste it again. |
+| `online.bad_room` | A room code is six letters and digits, as in the invite link. |
+| `online.copied` | Invite link copied. |
+| `join.heading` | Play with friends |
+| `join.invited` | You have an invite to lobby {code}. Nothing connects until you press Join. |
+| `join.button` | Join {code} |
+| `join.code` | Room code |
+| `join.note` | Type the six-character code, then press Enter. |
+| `lobby.heading` | Lobby {code} |
+| `lobby.heading.code` | Lobby by invite code |
+| `lobby.link` | Invite link: {link} |
+| `lobby.copy` | Copy the invite link |
+| `lobby.members` | Players: {n} of {seats} |
+| `lobby.member` | {name} |
+| `lobby.member.host` | {name} (host) |
+| `lobby.member.ready` | {name}, ready |
+| `lobby.chosen` | Next: {song}, {difficulty} |
+| `lobby.start` | Start |
+| `lobby.waiting_ready` | Start opens when every player is ready. |
+| `lobby.ready` | Ready |
+| `lobby.unready` | Not ready |
+| `lobby.leave` | Leave the lobby |
+| `paste.heading` | No relay? Invite by code |
+| `paste.host_note` | Make a code, send it to one friend however you like, and paste back the reply they send you. |
+| `paste.make` | Make an invite code |
+| `paste.your_invitation` | Your invite code |
+| `paste.their_reply` | Their reply code |
+| `paste.invitation` | Invite code from the host |
+| `paste.joiner_note` | Paste the whole code, then press Enter. |
+| `paste.your_reply` | Your reply code |
+| `paste.reply_note` | Send this back to the host. |
+| `paste.host_instead` | Host by invite code instead |

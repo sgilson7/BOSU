@@ -15,10 +15,13 @@ Every file in this repository that is not code written for it: its source, its a
 
 | Path | Project and version | Author | Licence | Checksum |
 | --- | --- | --- | --- | --- |
+| `web/net/vendor/trystero-nostr-0.25.4.js` | Trystero 0.25.4, Nostr strategy, bundled | Dan Motzenbecker | MIT | `web/net/vendor/SHA256SUMS` |
 
 ## Code taken from other repositories
 
 | From | What | Licence |
 | --- | --- | --- |
+| Raiders of the Lost Mart (sgilson7), via Vagrancy and Floodline | `web/net/rtc.js`: the star transport, repeated role, pasted codes | the person's own code |
+| crates.io: `ed25519-dalek` 2, `sha2` 0.10 and what they pull in | signing and hashing in the core | BSD-3-Clause; MIT or Apache-2.0 |
 
 A file with no licence, a likeness, a recording or any third-party picture is a worklist row in `SECOND-ORDER.md` for the person to decide, and stays out of git until they do.

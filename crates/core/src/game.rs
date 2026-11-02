@@ -55,6 +55,8 @@ pub enum Screen {
     Results,
     Settings,
     Calibrate,
+    Lobby,
+    Join,
 }
 
 impl Screen {
@@ -64,6 +66,7 @@ impl Screen {
             "select" => Screen::Select,
             "settings" => Screen::Settings,
             "calibrate" => Screen::Calibrate,
+            "join" => Screen::Join,
             _ => return None,
         })
     }
@@ -143,6 +146,8 @@ pub enum Command {
     /// Fetch this file under `data/` and pass its text to `chart.loaded`.
     LoadChart {
         url: String,
+        /// For checking a ledger record (`check.chart`), not for playing.
+        check: bool,
     },
     /// Fetch and decode this audio file, then call `audio.ready` with the url.
     LoadAudio {
@@ -175,18 +180,43 @@ pub enum Command {
     },
     /// The screen changed: draw `ui()` again.
     Ui,
+    /// Open the transport: host or join, by room code or pasted codes.
+    WireOpen {
+        host: bool,
+        mode: String,
+        room: String,
+    },
+    /// Make a pasted-code invitation and pass it to `online.invitation`.
+    WireInvitation,
+    /// Answer a pasted invitation; pass the reply to `online.reply`.
+    WireReply {
+        text: String,
+    },
+    /// Take the joiner's pasted reply.
+    WireAccept {
+        text: String,
+    },
+    WireClose,
+    Send {
+        peer: u32,
+        text: String,
+    },
+    /// Put this text on the clipboard.
+    Copy {
+        text: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct Session {
-    play: Play,
+pub(crate) struct Session {
+    pub(crate) play: Play,
     /// The audio context time the song starts at, once scheduled.
-    start_us: Option<i64>,
-    song_now: i64,
+    pub(crate) start_us: Option<i64>,
+    pub(crate) song_now: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct Calibration {
+pub(crate) struct Calibration {
     start_us: Option<i64>,
     offsets: Vec<i64>,
     now: i64,
@@ -194,7 +224,7 @@ struct Calibration {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct Outcome {
+pub(crate) struct Outcome {
     song: usize,
     difficulty: usize,
     score: i64,
@@ -220,11 +250,16 @@ pub struct Action {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Field {
+    /// The element's id on the page.
+    pub id: String,
     pub action: String,
     pub label: String,
     pub value: String,
+    /// The most characters; 0 for no limit.
     pub max: usize,
     pub note: String,
+    pub multiline: bool,
+    pub readonly: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -260,31 +295,33 @@ pub struct Ui {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Game {
-    strings: Strings,
-    hints: Vec<Hint>,
-    index: Index,
+    pub(crate) strings: Strings,
+    pub(crate) hints: Vec<Hint>,
+    pub(crate) index: Index,
     pub screen: Screen,
-    song: usize,
-    difficulty: usize,
+    pub(crate) song: usize,
+    pub(crate) difficulty: usize,
     pub kept: Save,
-    chart: Option<(String, Chart)>,
-    audio_ready: Option<String>,
-    session: Option<Session>,
-    calibration: Option<Calibration>,
-    outcome: Option<Outcome>,
-    paused: bool,
-    commands: Vec<Command>,
-    message: String,
+    pub(crate) chart: Option<(String, Chart)>,
+    pub(crate) audio_ready: Option<String>,
+    pub(crate) session: Option<Session>,
+    pub(crate) calibration: Option<Calibration>,
+    pub(crate) outcome: Option<Outcome>,
+    pub(crate) paused: bool,
+    pub(crate) commands: Vec<Command>,
+    pub(crate) message: String,
     /// The last pointer position, in playfield units.
-    pointer: (i32, i32),
+    pub(crate) pointer: (i32, i32),
     /// A still scene asked for by `?tile=`: the time to hold, once its
     /// chart arrives.
-    tile_at_ms: Option<i64>,
+    pub(crate) tile_at_ms: Option<i64>,
     /// Waiting for the next key, to add it as a press key.
-    listening: bool,
+    pub(crate) listening: bool,
+    /// The lobby and the ledger's traffic (`together.rs`).
+    pub(crate) together: crate::together::Together,
 }
 
-fn action(name: &str, value: impl ToString, label: String) -> Action {
+pub(crate) fn action(name: &str, value: impl ToString, label: String) -> Action {
     Action {
         name: name.into(),
         value: value.to_string(),
@@ -295,7 +332,7 @@ fn action(name: &str, value: impl ToString, label: String) -> Action {
     }
 }
 
-fn panel(id: &str) -> Panel {
+pub(crate) fn panel(id: &str) -> Panel {
     Panel {
         id: id.into(),
         heading: String::new(),
@@ -347,14 +384,15 @@ impl Game {
             pointer: (FIELD_W / 2, FIELD_H / 2),
             tile_at_ms: None,
             listening: false,
+            together: crate::together::Together::new(&crate::catalog::fnv(index_json.as_bytes())),
         })
     }
 
-    fn s(&self, key: &str) -> String {
+    pub(crate) fn s(&self, key: &str) -> String {
         fill(&self.strings, key, &[])
     }
 
-    fn f(&self, key: &str, values: &[(&str, String)]) -> String {
+    pub(crate) fn f(&self, key: &str, values: &[(&str, String)]) -> String {
         fill(&self.strings, key, values)
     }
 
@@ -373,7 +411,7 @@ impl Game {
         format!("{}?h={}", s.audio, s.audio_hash)
     }
 
-    fn show(&mut self, screen: Screen) {
+    pub(crate) fn show(&mut self, screen: Screen) {
         self.screen = screen;
         self.message.clear();
         self.commands.push(Command::Ui);
@@ -381,13 +419,16 @@ impl Game {
 
     /// Loads what the chosen chart needs, then waits for the first frame to
     /// start it.
-    fn begin(&mut self) {
+    pub(crate) fn begin(&mut self) {
         self.stop();
         self.outcome = None;
         let chart_url = self.chart_url();
         if self.chart.as_ref().map(|(u, _)| u != &chart_url).unwrap_or(true) {
             self.chart = None;
-            self.commands.push(Command::LoadChart { url: chart_url });
+            self.commands.push(Command::LoadChart {
+                url: chart_url,
+                check: false,
+            });
         }
         let audio_url = self.audio_url();
         if self.audio_ready.as_ref() != Some(&audio_url) {
@@ -398,6 +439,14 @@ impl Game {
             pct: self.kept.settings.volume_pct,
         });
         self.show(Screen::Loading);
+    }
+
+    /// The host's song and difficulty go to the lobby.
+    fn pick_for_lobby(&mut self) {
+        if let Some(l) = self.together.lobby.as_mut() {
+            l.pick(self.song, self.difficulty);
+        }
+        self.after_wire();
     }
 
     fn stop(&mut self) {
@@ -443,6 +492,7 @@ impl Game {
                     return Err(format!("There is no song \"{value}\"."));
                 }
                 self.song = k;
+                self.pick_for_lobby();
                 self.commands.push(Command::Ui);
             }
             "difficulty.pick" => {
@@ -451,6 +501,7 @@ impl Game {
                     .position(|d| d.key == value)
                     .ok_or_else(|| format!("There is no difficulty \"{value}\"."))?;
                 self.difficulty = k;
+                self.pick_for_lobby();
                 self.commands.push(Command::Ui);
             }
             "play.start" => self.begin(),
@@ -478,6 +529,7 @@ impl Game {
                 self.tile_at_ms = Some(ms.parse().map_err(|_| bad())?);
                 self.commands.push(Command::LoadChart {
                     url: self.chart_url(),
+                    check: false,
                 });
             }
             "audio.ready" => self.audio_ready = Some(value.to_string()),
@@ -511,7 +563,9 @@ impl Game {
                 match self.screen {
                     Screen::Play => return self.act("play.pause", ""),
                     Screen::Select | Screen::Settings => self.show(Screen::Title),
+                    Screen::Results if self.together.lobby.is_some() => self.show(Screen::Lobby),
                     Screen::Results => self.show(Screen::Select),
+                    Screen::Join => self.show(Screen::Title),
                     Screen::Calibrate => return self.act("screen.show", "settings"),
                     _ => {}
                 }
@@ -526,7 +580,12 @@ impl Game {
             "play.retry" => self.begin(),
             "play.quit" => {
                 self.stop();
-                self.show(Screen::Select);
+                self.together.in_round = false;
+                self.show(if self.together.lobby.is_some() {
+                    Screen::Lobby
+                } else {
+                    Screen::Select
+                });
             }
             "audio.less" | "audio.more" => {
                 Self::step(
@@ -585,6 +644,7 @@ impl Game {
             }
             "calibrate.again" => return self.act("screen.show", "calibrate"),
             "save.loaded" => self.restore(value),
+            other if crate::together::handles(other) => return self.together_act(other, value),
             other => return Err(format!("Unknown action \"{other}\".")),
         }
         let changes_save = ["name.set", "keys.remove", "keys.reset", "mouse.toggle"];
@@ -730,7 +790,13 @@ impl Game {
         }
         let d = DIFFICULTIES[chart.difficulty];
         let first = chart.targets.first().map(|t| t.t).unwrap_or(0);
-        let lead = LEAD_US.max(d.approach_us + FIRST_TARGET_MARGIN_US - first);
+        // a lobby's round counts in together (PLAN.md decision 16)
+        let least = if self.together.in_round {
+            crate::together::COUNT_IN_US
+        } else {
+            LEAD_US
+        };
+        let lead = least.max(d.approach_us + FIRST_TARGET_MARGIN_US - first);
         let start = heard + lead;
         self.session = Some(Session {
             play: Play::new(chart),
@@ -755,6 +821,10 @@ impl Game {
         let now = heard - start - offset;
         session.song_now = now;
         session.play.advance(now);
+        self.post_score(now, false);
+        let Some(session) = self.session.as_ref() else {
+            return;
+        };
         let p = &session.play;
         let last_end = p.chart.targets.iter().map(|t| t.end()).max().unwrap_or(0);
         if now >= p.chart.length_us || (p.over() && now >= last_end + OUTRO_US) {
@@ -763,9 +833,11 @@ impl Game {
     }
 
     fn finish(&mut self) {
+        self.post_score(0, true);
         let Some(session) = self.session.take() else {
             return;
         };
+        self.record_play(&session.play);
         self.commands.push(Command::StopAudio);
         let p = session.play;
         let key = self.best_key(self.song, self.difficulty);
@@ -832,10 +904,14 @@ impl Game {
                 p.lines.push(self.s("intro"));
                 p.actions
                     .push(action("screen.show", "select", self.s("menu.play")));
+                p.actions.push(action("online.host", "", self.s("menu.host")));
+                p.actions.push(action("screen.show", "join", self.s("menu.join")));
                 p.actions
                     .push(action("screen.show", "settings", self.s("menu.settings")));
                 panels.push(p);
             }
+            Screen::Lobby => self.lobby_panels(&mut panels),
+            Screen::Join => self.join_panels(&mut panels),
             Screen::Select | Screen::Loading => {
                 let mut songs = panel("songs");
                 songs.heading = self.s("select.heading");
@@ -883,6 +959,7 @@ impl Game {
                 go.actions
                     .push(action("screen.show", "title", self.s("menu.back")));
                 panels.push(go);
+                panels.push(self.board_panel());
             }
             Screen::Play => {
                 if self.paused {
@@ -938,9 +1015,34 @@ impl Game {
                     if o.new_best {
                         p.lines.push(self.s("results.best"));
                     }
-                    p.actions.push(action("play.retry", "", self.s("results.retry")));
-                    p.actions.push(action("play.quit", "", self.s("results.songs")));
-                    panels.push(p);
+                    if self.together.lobby.is_some() {
+                        p.actions.push(action("lobby.back", "", self.s("results.lobby")));
+                        panels.push(p);
+                        let mut all = panel("standings");
+                        all.heading = self.s("results.standings");
+                        for (k, (name, sc)) in self.standings().iter().enumerate() {
+                            let key = if sc.done {
+                                "results.standing.done"
+                            } else {
+                                "results.standing.playing"
+                            };
+                            all.lines.push(self.f(
+                                key,
+                                &[
+                                    ("rank", (k + 1).to_string()),
+                                    ("name", name.clone()),
+                                    ("score", grouped(sc.score)),
+                                    ("accuracy", percent(sc.accuracy)),
+                                ],
+                            ));
+                        }
+                        panels.push(all);
+                    } else {
+                        p.actions.push(action("play.retry", "", self.s("results.retry")));
+                        p.actions.push(action("play.quit", "", self.s("results.songs")));
+                        panels.push(p);
+                    }
+                    panels.push(self.board_panel());
                 }
             }
             Screen::Settings => {
@@ -1015,11 +1117,14 @@ impl Game {
                 panels.push(mouse);
                 let mut name = panel("name");
                 name.field = Some(Field {
+                    id: "name-in".into(),
                     action: "name.set".into(),
                     label: self.s("settings.name"),
                     value: st.name.clone(),
                     max: NAME_MAX,
                     note: self.s("settings.name.note"),
+                    multiline: false,
+                    readonly: false,
                 });
                 panels.push(name);
                 let mut back = panel("back");
@@ -1081,6 +1186,9 @@ impl Game {
                 if let Some(s) = &self.session {
                     let t = s.song_now + self.kept.settings.visual_offset_ms * MS;
                     draw_play(&mut list, &s.play, t, s.song_now, &self.strings, self.pointer);
+                    if self.together.in_round {
+                        draw_standings(&mut list, &self.standings(), s.song_now, &self.strings);
+                    }
                 }
             }
             Screen::Calibrate => {
@@ -1119,6 +1227,16 @@ impl Game {
 
     /// How many targets of the play under way have a judgement, for the
     /// page's `data-judged` (the browser check reads it).
+    /// How many players' scores this browser holds for the lobby's round,
+    /// for the page's `data-scoring` (the online check reads it).
+    pub fn scoring(&self) -> u32 {
+        self.together
+            .lobby
+            .as_ref()
+            .map(|l| l.board.len() as u32)
+            .unwrap_or(0)
+    }
+
     pub fn judged(&self) -> u32 {
         self.session
             .as_ref()
@@ -1126,7 +1244,7 @@ impl Game {
             .unwrap_or(0)
     }
 
-    fn keep(&mut self) {
+    pub(crate) fn keep(&mut self) {
         self.commands.push(Command::Store {
             text: save::store(&self.kept),
         });
@@ -1337,6 +1455,39 @@ pub fn draw_play(list: &mut DrawList, p: &Play, t: i64, heard: i64, strings: &St
     // the cursor
     list.circle(pointer.0, pointer.1, 12, None, Some(Color::Ink), 3);
     list.circle(pointer.0, pointer.1, 4, Some(Color::Ink), None, 0);
+}
+
+/// The lobby's scores down the left of the playfield, and the count-in.
+fn draw_standings(list: &mut DrawList, rows: &[(String, crate::online::Score)], now: i64, strings: &Strings) {
+    let x = 24;
+    for (k, (name, sc)) in rows.iter().take(crate::tuning::LOBBY_SEATS).enumerate() {
+        let y = 150 + k as i32 * 74;
+        let short: String = name.chars().take(12).collect();
+        list.text(x, y, 26, Color::Ink, Align::Left, &format!("{}. {short}", k + 1));
+        list.text(
+            x,
+            y + 30,
+            22,
+            Color::Muted,
+            Align::Left,
+            &fill(
+                strings,
+                "play.standing",
+                &[("score", grouped(sc.score)), ("n", grouped(sc.combo as i64))],
+            ),
+        );
+    }
+    if now < 0 {
+        let left = (-now + 999_999) / 1_000_000;
+        list.text(
+            FIELD_W / 2,
+            FIELD_H / 2,
+            160,
+            Color::Accent,
+            Align::Center,
+            &left.to_string(),
+        );
+    }
 }
 
 fn draw_calibration(list: &mut DrawList, now: i64, done: bool) {

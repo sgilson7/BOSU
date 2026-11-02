@@ -27,6 +27,10 @@ Countless Days: an original browser rhythm game, press each target as its ring c
 | `crates/chart_tool` | build-time ffmpeg decoding and file writing |
 | `web/app.js` | carries out the core's commands; forwards events with timestamps |
 | `data/songs.json` | the song list people edit; `data/charts/` is generated |
+| `crates/core/src/online.rs` | the lobby's protocol: hello, members, Ready, Start, scores |
+| `crates/core/src/ledger.rs` | records: signing, checking, merging, trimming |
+| `crates/core/src/together.rs` | the lobby and ledger joined to screens, play and save |
+| `web/online.js`, `web/net/` | the transport (kits/online); nothing loads until Host or Join |
 
 ## Commands
 
@@ -34,7 +38,9 @@ Countless Days: an original browser rhythm game, press each target as its ring c
 - New songs: put the MP3 in `web/audio/`, list it in `data/songs.json`, then `cargo run --release -p chart_tool -- analyse` and `-- charts`. `-- check` says whether the charts are stale.
 - `tools/placeholders/make.sh`: remakes the placeholder songs (needs ffmpeg).
 - `.venv/bin/python tests/browser/probe_frames.py chromium firefox webkit`: frame times (BO-11).
-- `python3 scripts/break_tests.py`: 37 of 37 caught.
+- `python3 scripts/break_tests.py`: every break caught.
+- `.venv/bin/python tests/browser/online.py chromium firefox webkit`: two browsers by pasted codes, on the origin: lobby, scores and a ledger record crossing.
+- `.venv/bin/python tests/browser/relays.py [ORIGIN]`: two browsers by room code over the real relays (leaves the origin).
 
 ## What will bite within the hour
 
@@ -58,6 +64,7 @@ Every `SECOND-ORDER.md` row with status *person*, by number, with what the perso
 - R3.1: the five audio files: downloads turned on for each track, or the files in BrowserOSU/songs/ (BO-Q18).
 - R3.11: whether Easy is busy enough, after playing it.
 - R3.12: the placeholder songs' titles, which go when the real songs arrive.
+- R4.4: a lobby with a friend on another network, by hand.
 
 ## Mistakes so far
 
@@ -76,3 +83,4 @@ One action.
 | Date | Commit | Address | Checks |
 | --- | --- | --- | --- |
 | 2026-11-02 | cb035fb (build e6d82e8f9f77) | https://sgilson7.github.io/BOSU/ | `./scripts/check.sh` passed before publishing; `BUILDER_ORIGIN=https://sgilson7.github.io/BOSU tests/browser/check.py` passed in chromium, firefox, webkit, webkit-iphone, webkit-ipad. Solo game on placeholder songs (BO-Q17: A). Not checked: real audio latency on a person's machine, a real phone. |
+| 2026-11-02 | e30d0c4 | https://sgilson7.github.io/BOSU/ | check.sh passed; live browser check passed in all five profiles. Press keys (T4), MIT licence (T5). |
