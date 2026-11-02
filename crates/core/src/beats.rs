@@ -52,7 +52,11 @@ fn log2_256(v: i64) -> i64 {
         return 0;
     }
     let l = 63 - v.leading_zeros() as i64;
-    let frac = if l >= 8 { (v >> (l - 8)) & 255 } else { (v << (8 - l)) & 255 };
+    let frac = if l >= 8 {
+        (v >> (l - 8)) & 255
+    } else {
+        (v << (8 - l)) & 255
+    };
     l * 256 + frac
 }
 
@@ -165,17 +169,30 @@ pub fn analyse(samples: &[i16]) -> Option<Analysis> {
         lag_us /= 2;
     }
     // refine the period and phase together, coarse then fine
-    let (p, _) = fit(&onsets, (lag_us - 2 * hop, lag_us + 2 * hop), 200, hop / 2, length);
+    let (p, _) = fit(
+        &onsets,
+        (lag_us - 2 * hop, lag_us + 2 * hop),
+        200,
+        hop / 2,
+        length,
+    );
     let (beat_us, phase) = fit(&onsets, (p - 400, p + 400), 10, hop / 8, length);
     let first_beat_us = phase % beat_us;
     let count = ((length - first_beat_us) * SLOTS_PER_BEAT / beat_us).max(0) as usize;
     let slots = (0..count)
         .map(|q| {
             let t = first_beat_us + q as i64 * beat_us / SLOTS_PER_BEAT;
-            env_at(&onsets, t).max(env_at(&onsets, t - hop)).min(u32::MAX as i64) as u32
+            env_at(&onsets, t)
+                .max(env_at(&onsets, t - hop))
+                .min(u32::MAX as i64) as u32
         })
         .collect();
-    Some(Analysis { beat_us, first_beat_us, length_us: length, slots })
+    Some(Analysis {
+        beat_us,
+        first_beat_us,
+        length_us: length,
+        slots,
+    })
 }
 
 #[cfg(test)]
@@ -221,14 +238,21 @@ pub mod tests {
     fn assert_grid(a: &Analysis, bpm: i64, first_us: i64) {
         let beat = 60 * US / bpm;
         let found = a.bpm_milli();
-        assert!((found - bpm * 1000).abs() <= 1000, "{bpm} bpm found as {found} milli");
+        assert!(
+            (found - bpm * 1000).abs() <= 1000,
+            "{bpm} bpm found as {found} milli"
+        );
         // each beat lies within one hop of a found grid line, to the end
         let hop = hop_us();
         let mut t = first_us;
         while t < a.length_us - beat {
             let k = ((t - a.first_beat_us) + a.beat_us / 2).div_euclid(a.beat_us);
             let line = a.first_beat_us + k * a.beat_us;
-            assert!((line - t).abs() <= hop, "beat at {t} us is {} us off the grid", line - t);
+            assert!(
+                (line - t).abs() <= hop,
+                "beat at {t} us is {} us off the grid",
+                line - t
+            );
             t += beat;
         }
     }
@@ -272,7 +296,38 @@ pub mod tests {
         let a = analyse(&song(20, &clicks_at(120, 0, 20), 5)).expect("a beat");
         // slot 0, 4, 8 are beats; 2, 6 are half beats with nothing on them
         for beat in 1..20usize {
-            assert!(a.slots[beat * 4] > 4 * a.slots[beat * 4 + 2].max(1), "beat {beat}: {:?}", &a.slots[beat * 4..beat * 4 + 4]);
+            assert!(
+                a.slots[beat * 4] > 4 * a.slots[beat * 4 + 2].max(1),
+                "beat {beat}: {:?}",
+                &a.slots[beat * 4..beat * 4 + 4]
+            );
+        }
+    }
+
+    #[test]
+    fn a_held_note_is_an_onset_where_it_starts_only() {
+        // a square tone held 300 ms from each beat at 120 bpm: 125 ms in it
+        // is still loud, and 250 ms in it is louder than the silence after
+        // it, but neither is a rise
+        let n = (20 * RATE) as usize;
+        let mut s = vec![0i16; n];
+        let beat = (RATE / 2) as usize;
+        for b in 0..40 {
+            for k in 0..(RATE as usize * 3 / 10) {
+                if let Some(v) = s.get_mut(b * beat + k) {
+                    *v = if (k / 50) % 2 == 0 { 9000 } else { -9000 };
+                }
+            }
+        }
+        let a = analyse(&s).expect("a beat");
+        assert!((a.bpm_milli() - 120_000).abs() <= 1000);
+        for beat in 2..30usize {
+            let later = a.slots[beat * 4 + 1].max(a.slots[beat * 4 + 2]).max(1);
+            assert!(
+                a.slots[beat * 4] > 4 * later,
+                "beat {beat}: {:?}",
+                &a.slots[beat * 4..beat * 4 + 4]
+            );
         }
     }
 

@@ -150,7 +150,11 @@ mod tests {
     #[test]
     fn windows_nest_and_targets_fit_the_field() {
         for d in DIFFICULTIES {
-            assert!(0 < d.perfect_us && d.perfect_us < d.great_us && d.great_us < d.good_us, "{}", d.key);
+            assert!(
+                0 < d.perfect_us && d.perfect_us < d.great_us && d.great_us < d.good_us,
+                "{}",
+                d.key
+            );
             // two targets a minimum gap apart are never both inside one Good window
             assert!(2 * d.good_us < d.min_gap_us + d.good_us, "{}", d.key);
             assert!(X_MIN - d.radius > 0 && X_MAX + d.radius < FIELD_W, "{}", d.key);

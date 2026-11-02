@@ -59,3 +59,13 @@ name = "the checks themselves"
 # a change to a script that runs or builds the checks runs everything
 files = ["scripts/**", "tests/tags.toml"]
 steps = ["all"]
+
+[[rule]]
+name = "old saves"
+files = ["tests/saves/**"]
+steps = ["core"]
+
+[[rule]]
+name = "the placeholder songs' maker"
+files = ["tools/placeholders/**"]
+steps = ["core", "build", "browser"]

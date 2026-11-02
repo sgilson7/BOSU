@@ -20,6 +20,18 @@ One row per assumption, surprise or open item. **Kind** is *divergence* (what wa
 | R2.3 | divergence | T2 asks for "some form of blockchain". | Spreading scores needs a merge-only set of records with ids, not mining or one agreed chain. | Planned as the ledger (PLAN.md 17 to 20); trust, size and names are BO-Q13 to BO-Q15. | | open |
 | R2.4 | worklist | The plan's questions. | BO-Q12 to BO-Q17, on the journal's plan page. Answered 2026-11-02; BO-Q13 B is T3. | | | done |
 | R3.1 | worklist | With the right link, the songs can be downloaded from SoundCloud (T1). | soundcloud.com/leefy5/sets/countless-days-in-ableton lists BoneCereal and Monke Walkin' (Leefy5), bunko carnival (cay-wagner), Grunge Dome and Lime Cruncher (user-449148713). All five are marked not downloadable, so I took nothing. | The files come by downloads turned on or by the person's own copies (BO-Q18). Placeholders until then. | | person |
+| R3.2 | finding | Target centres may sit between y 120 and 840 (PLAN.md's table). | With Easy's radius of 76, a target at y 840 reaches 916, past the 900-unit field. | `Y_MAX` is 800; the mockups' numbers.json follows. | `windows_nest_and_targets_fit_the_field` in `tuning.rs` | done |
+| R3.3 | finding | An input at a tick's exact time could be applied after the tick. | `advance(t)` ran the tick before the move at the same time, so a move made at the tick did not count for it. | An input first runs time up to t − 1 µs, then applies, then the tick at t follows. | `leaving_the_path_breaks_the_combo` | done |
+| R3.4 | divergence | The beat grid by dynamic programming (PLAN.md decision 9). | Songs made in Ableton keep one tempo; one grid fitted to the whole song to 10 µs puts every target on the song's own beat, where a grid made by dynamic programming over hops is only good to a hop (5.8 ms). Placeholders came out within 0.01 beats a minute. A song that changes tempo would need the plan's way. | `beats.rs` fits period and phase over the whole song. | `beats.rs` tests | open |
+| R3.5 | divergence | The canvas kit draws at a fixed size with shapes at three scales. | The playfield must fill any window, and targets are circles of a size per difficulty that fade in. | `render2d.js` scales the field to the canvas's displayed size; `draw.rs` takes a raw size and adds `circle` and `alpha`. | BUILDER-SPEC.md change table | done |
+| R3.6 | finding | Every file under `web/` is text for the page scan. | The songs are MP3; the scan stopped on the first one. | The scan skips media files by extension and still requires every other file to be text. | `MEDIA` in `boundary.rs`; BUILDER-SPEC.md | done |
+| R3.7 | finding | The template's check covers touch with `webkit-iphone` when asked. | BO-Q7 wants tablets and phones checked every time. | `check.py` runs `webkit-iphone` and `webkit-ipad` by default. | BUILDER-SPEC.md | done |
+| R3.8 | divergence | `kits/realtime`'s `input.js` (PLAN.md decision 1). | This game needs no pointer lock and no tick bits: every event goes to the core with its own timestamp. | `app.js` forwards Pointer Events and Z/X keys itself; codes come from the core's assets. | | done |
+| R3.9 | finding | The WebKit console error "Refused to apply a stylesheet" came from the page. | Playwright's WebKit screenshot injects a stylesheet; the page's CSP refuses it, correctly. The check takes no screenshots, so it never sees it. | Nothing in the page; screenshots for the journal are taken in Chromium. | | done |
+| R3.10 | finding | The game decodes MP3 the way the chart tool does. | ffmpeg removes the encoder's delay at the start of an MP3 using its LAME header; Chrome and Firefox do too, Safari may not. A constant shift is what the audio offset and calibration absorb. | Charts are analysed from the same MP3 the page plays. | | open |
+| R3.11 | worklist | Easy has about one target every two to three seconds on the placeholders (27 in 70 s). | Whether that is too sparse is a matter of feel. | Play it and file a triage row if Easy should be busier; `keep_pct` in `tuning.rs` is the number. | | person |
+| R3.12 | worklist | The placeholder songs' titles ("Placeholder 1" to "5", "by BOSU"). | Names a player reads are the person's (BO-10); they go when the real songs arrive. | | | person |
+| R3.13 | worklist | The repository is public with no LICENSE file. | Without one, the code is all rights reserved, the safe default; choosing a licence is the person's. | | | person |
 
 ## Strings written by the agent
 
@@ -27,3 +39,64 @@ Each reader-visible string the agent wrote, with its key, for the person to read
 
 | Key | String |
 | --- | --- |
+| `title` | Countless Days |
+| `intro` | Press each target as its ring closes. Mouse or pen to aim; click, Z or X to press. On a touch screen, tap the target. |
+| `menu.play` | Play |
+| `menu.settings` | Settings |
+| `menu.back` | Back |
+| `select.heading` | Songs |
+| `select.difficulty` | Difficulty |
+| `select.start` | Start |
+| `select.by` | by {by} |
+| `select.facts` | {bpm} beats a minute, {length} |
+| `select.targets` | {n} targets |
+| `select.best` | Best {score}, {accuracy} |
+| `select.unplayed` | Not played yet |
+| `difficulty.easy` | Easy |
+| `difficulty.normal` | Normal |
+| `difficulty.hard` | Hard |
+| `difficulty.expert` | Expert |
+| `difficulty.master` | Master |
+| `loading` | Loading {song} |
+| `loading.failed` | {song} could not be loaded: {why}. Check the connection and press Start again. |
+| `play.score` | {score} |
+| `play.accuracy` | {accuracy} |
+| `play.combo` | {n} combo |
+| `judgement.perfect` | Perfect |
+| `judgement.great` | Great |
+| `judgement.good` | Good |
+| `judgement.miss` | Miss |
+| `pause.heading` | Paused |
+| `pause.resume` | Resume |
+| `pause.retry` | Start again |
+| `pause.quit` | Back to songs |
+| `results.heading` | {song}, {difficulty} |
+| `results.score` | Score {score} |
+| `results.accuracy` | Accuracy {accuracy} |
+| `results.combo` | Longest combo {n} of {full} |
+| `results.counts` | Perfect {perfect}, Great {great}, Good {good}, Miss {miss} |
+| `results.holds` | Hold ticks {hit} of {total} |
+| `results.timing.early` | Your hits came {ms} ms early on average. |
+| `results.timing.late` | Your hits came {ms} ms late on average. |
+| `results.timing.none` | No hits to time. |
+| `results.best` | A new best for this chart. |
+| `results.retry` | Play again |
+| `results.songs` | Back to songs |
+| `settings.heading` | Settings |
+| `settings.audio` | Audio offset: {ms} ms |
+| `settings.visual` | Visual offset: {ms} ms |
+| `settings.volume` | Volume: {pct}% |
+| `settings.name` | Your name |
+| `settings.name.note` | Your name travels with your scores to everyone you play with, and on to the people they play with. |
+| `settings.less` | Less |
+| `settings.more` | More |
+| `settings.calibrate` | Calibrate |
+| `calibrate.heading` | Calibrate the audio offset |
+| `calibrate.intro` | Press Z, X or click on every click you hear. After {n} presses the game sets your audio offset. |
+| `calibrate.count` | {n} of {total} presses |
+| `calibrate.result` | Your presses came {ms} ms after the clicks. The audio offset is now {offset} ms. |
+| `calibrate.done` | Done |
+| `calibrate.again` | Again |
+| `save.unreadable` | Your saved scores and settings could not be read. They are kept in this browser; a new save has started. |
+| `save.newer` | Your saved scores come from a newer version of the game. They are kept in this browser; a new save has started. |
+| `save.no_step` | Your saved scores come from a version this one cannot update. They are kept in this browser; a new save has started. |

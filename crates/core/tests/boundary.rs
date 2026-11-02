@@ -718,7 +718,10 @@ fn page_keeps_no_rule_and_names_no_other_origin() {
     for path in web_files() {
         // media files hold no code and no address; every other file must be
         // text (R3.6)
-        let media = path.extension().map(|x| MEDIA.iter().any(|m| x == *m)).unwrap_or(false);
+        let media = path
+            .extension()
+            .map(|x| MEDIA.iter().any(|m| x == *m))
+            .unwrap_or(false);
         if media {
             continue;
         }

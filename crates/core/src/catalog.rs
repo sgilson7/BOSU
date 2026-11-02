@@ -63,9 +63,15 @@ pub fn parse_songs(json: &str) -> Result<Songs, String> {
         return Err("The song list is empty.".into());
     }
     for (k, song) in s.songs.iter().enumerate() {
-        let ok_id = !song.id.is_empty() && song.id.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-');
+        let ok_id = !song.id.is_empty()
+            && song
+                .id
+                .chars()
+                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-');
         if !ok_id {
-            return Err(format!("Song {k} has an id that is not lower-case letters, digits and hyphens."));
+            return Err(format!(
+                "Song {k} has an id that is not lower-case letters, digits and hyphens."
+            ));
         }
         if s.songs[..k].iter().any(|o| o.id == song.id) {
             return Err(format!("Song id \"{}\" appears twice.", song.id));
@@ -125,7 +131,12 @@ pub fn pretty(c: &Chart) -> String {
 }
 
 /// The index of every song and chart.
-pub fn index(songs: &Songs, analyses: &[Analysis], charts: &[Vec<(String, String)>], audio_hashes: &[String]) -> String {
+pub fn index(
+    songs: &Songs,
+    analyses: &[Analysis],
+    charts: &[Vec<(String, String)>],
+    audio_hashes: &[String],
+) -> String {
     let index = Index {
         songs: songs
             .songs

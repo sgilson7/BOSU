@@ -22,7 +22,12 @@ pub enum Judgement {
 
 /// Points for each judgement before the combo multiplier (BO-Q16).
 pub const POINTS: [i64; 4] = [100, 60, 25, 0];
-pub const JUDGEMENTS: [Judgement; 4] = [Judgement::Perfect, Judgement::Great, Judgement::Good, Judgement::Miss];
+pub const JUDGEMENTS: [Judgement; 4] = [
+    Judgement::Perfect,
+    Judgement::Great,
+    Judgement::Good,
+    Judgement::Miss,
+];
 
 impl Judgement {
     pub fn key(self) -> &'static str {
@@ -173,7 +178,13 @@ impl Play {
                 self.hold = Some(ActiveHold { index, next_tick: 0 });
             }
         }
-        self.feed.push(Feedback { t: at, x, y, mark: Mark::Judged(j), offset_us });
+        self.feed.push(Feedback {
+            t: at,
+            x,
+            y,
+            mark: Mark::Judged(j),
+            offset_us,
+        });
         while self.first_open < self.judged.len() && self.judged[self.first_open].is_some() {
             self.first_open += 1;
         }
@@ -217,11 +228,23 @@ impl Play {
             self.score += self.multiplied(END_POINTS);
             self.add_combo();
             self.holds_done += 1;
-            self.feed.push(Feedback { t: at, x, y, mark: Mark::HoldDone, offset_us: 0 });
+            self.feed.push(Feedback {
+                t: at,
+                x,
+                y,
+                mark: Mark::HoldDone,
+                offset_us: 0,
+            });
         } else {
             self.ticks_total += (ticks.len() - h.next_tick) as u32;
             self.combo = 0;
-            self.feed.push(Feedback { t: at, x, y, mark: Mark::HoldBroken, offset_us: 0 });
+            self.feed.push(Feedback {
+                t: at,
+                x,
+                y,
+                mark: Mark::HoldBroken,
+                offset_us: 0,
+            });
         }
     }
 
@@ -239,13 +262,22 @@ impl Play {
                     let following = self.following(h.index, at);
                     if h.next_tick < ticks.len() {
                         self.ticks_total += 1;
-                        self.hold = Some(ActiveHold { next_tick: h.next_tick + 1, ..h });
+                        self.hold = Some(ActiveHold {
+                            next_tick: h.next_tick + 1,
+                            ..h
+                        });
                         let (x, y) = target.point_at(at);
                         if following {
                             self.ticks_hit += 1;
                             self.score += TICK_POINTS;
                             self.add_combo();
-                            self.feed.push(Feedback { t: at, x, y, mark: Mark::Tick, offset_us: 0 });
+                            self.feed.push(Feedback {
+                                t: at,
+                                x,
+                                y,
+                                mark: Mark::Tick,
+                                offset_us: 0,
+                            });
                         } else {
                             self.combo = 0;
                         }
@@ -338,7 +370,10 @@ impl Play {
         if judged == 0 {
             return 10_000;
         }
-        let earned: i64 = JUDGEMENTS.iter().map(|j| POINTS[*j as usize] * self.counts[*j as usize] as i64).sum();
+        let earned: i64 = JUDGEMENTS
+            .iter()
+            .map(|j| POINTS[*j as usize] * self.counts[*j as usize] as i64)
+            .sum();
         earned * 100 / judged
     }
 
@@ -362,8 +397,15 @@ pub fn perfect_inputs(chart: &Chart) -> Vec<Input> {
     let d = DIFFICULTIES[chart.difficulty];
     let mut out = Vec::new();
     for target in &chart.targets {
-        out.push(Input::Move { t: target.t, x: target.x, y: target.y });
-        out.push(Input::Down { t: target.t, button: 0 });
+        out.push(Input::Move {
+            t: target.t,
+            x: target.x,
+            y: target.y,
+        });
+        out.push(Input::Down {
+            t: target.t,
+            button: 0,
+        });
         for tick in tick_times(target, chart.beat_us, d.good_us) {
             let (x, y) = target.point_at(tick);
             out.push(Input::Move { t: tick, x, y });
@@ -455,10 +497,16 @@ mod tests {
     fn a_press_must_land_inside_the_circle() {
         // Easy radius 76: 76 to the right counts, 77 does not
         let c = one(EASY);
-        assert_eq!(press_at(&c, 2_000_000, 876, 450).judged[0], Some(Judgement::Perfect));
+        assert_eq!(
+            press_at(&c, 2_000_000, 876, 450).judged[0],
+            Some(Judgement::Perfect)
+        );
         assert_eq!(press_at(&c, 2_000_000, 877, 450).judged[0], None);
         // 3-4-5: (45, 60) is 75 away
-        assert_eq!(press_at(&c, 2_000_000, 845, 510).judged[0], Some(Judgement::Perfect));
+        assert_eq!(
+            press_at(&c, 2_000_000, 845, 510).judged[0],
+            Some(Judgement::Perfect)
+        );
     }
 
     #[test]
@@ -480,9 +528,15 @@ mod tests {
     fn holding_a_key_down_presses_once() {
         let c = chart(EASY, vec![tap(2000, 800, 450, 1), tap(2100, 800, 450, 2)]);
         let mut p = press_at(&c, 2_000_000, 800, 450);
-        p.input(Input::Down { t: 2_100_000, button: 0 });
+        p.input(Input::Down {
+            t: 2_100_000,
+            button: 0,
+        });
         assert_eq!(p.judged[1], None, "a repeat of a held button");
-        p.input(Input::Down { t: 2_100_000, button: 1 });
+        p.input(Input::Down {
+            t: 2_100_000,
+            button: 1,
+        });
         assert_eq!(p.judged[1], Some(Judgement::Perfect), "the other key");
     }
 
@@ -493,7 +547,9 @@ mod tests {
     // 90.00%. Max combo 5.
     #[test]
     fn hand_worked_score_for_ten_targets_with_one_miss() {
-        let targets = (1..=10).map(|k| tap(k * 1000, 400 + 50 * k as i32, 450, k as u32)).collect();
+        let targets = (1..=10)
+            .map(|k| tap(k * 1000, 400 + 50 * k as i32, 450, k as u32))
+            .collect();
         let c = chart(EASY, targets);
         let inputs: Vec<Input> = perfect_inputs(&c)
             .into_iter()
@@ -508,7 +564,9 @@ mod tests {
 
     #[test]
     fn the_multiplier_stops_growing_at_a_combo_of_100() {
-        let targets = (0..102).map(|k| tap(1000 + k * 700, 400 + (k as i32 % 10) * 100, 450, 1)).collect();
+        let targets = (0..102)
+            .map(|k| tap(1000 + k * 700, 400 + (k as i32 % 10) * 100, 450, 1))
+            .collect();
         let c = chart(EASY, targets);
         let p = replay(c.clone(), &perfect_inputs(&c));
         // 100 x (100 + k)/100 for k = 0..99 is 100 + k, summing to 14950;
@@ -520,7 +578,10 @@ mod tests {
         // Easy, beat 500 ms: a hold from 2.0 s to 4.0 s along a straight
         // path. Ticks at 2.5, 3.0 and 3.5 s (3.5 + 0.14 < 4.0).
         let mut c = chart(EASY, vec![tap(2000, 400, 450, 1)]);
-        c.targets[0].hold = Some(Hold { end: 4_000_000, path: vec![[400, 450], [800, 450]] });
+        c.targets[0].hold = Some(Hold {
+            end: 4_000_000,
+            path: vec![[400, 450], [800, 450]],
+        });
         c.length_us = 6_000_000;
         c
     }
@@ -528,7 +589,10 @@ mod tests {
     #[test]
     fn a_hold_followed_to_the_end_scores_every_tick() {
         let c = hold_chart();
-        assert_eq!(tick_times(&c.targets[0], c.beat_us, DIFFICULTIES[0].good_us), vec![2_500_000, 3_000_000, 3_500_000]);
+        assert_eq!(
+            tick_times(&c.targets[0], c.beat_us, DIFFICULTIES[0].good_us),
+            vec![2_500_000, 3_000_000, 3_500_000]
+        );
         let p = replay(c.clone(), &perfect_inputs(&c));
         // head 100 x 1.00, ticks 10 each, end 30 x (100 + 4)/100 = 31
         assert_eq!(p.score, 100 + 30 + 31);
@@ -558,13 +622,31 @@ mod tests {
     fn letting_go_early_misses_the_end() {
         let c = hold_chart();
         let mut p = Play::new(c.clone());
-        p.input(Input::Move { t: 2_000_000, x: 400, y: 450 });
-        p.input(Input::Down { t: 2_000_000, button: 0 });
-        p.input(Input::Move { t: 2_500_000, x: 500, y: 450 });
+        p.input(Input::Move {
+            t: 2_000_000,
+            x: 400,
+            y: 450,
+        });
+        p.input(Input::Down {
+            t: 2_000_000,
+            button: 0,
+        });
+        p.input(Input::Move {
+            t: 2_500_000,
+            x: 500,
+            y: 450,
+        });
         // 3.85 s is 150 ms before the end, outside Easy's 140 ms, with the
         // cursor on the point (x 770)
-        p.input(Input::Move { t: 3_850_000, x: 770, y: 450 });
-        p.input(Input::Up { t: 3_850_000, button: 0 });
+        p.input(Input::Move {
+            t: 3_850_000,
+            x: 770,
+            y: 450,
+        });
+        p.input(Input::Up {
+            t: 3_850_000,
+            button: 0,
+        });
         p.advance(6_000_000);
         assert_eq!(p.holds_done, 0);
         assert_eq!(p.combo, 0);
@@ -572,8 +654,15 @@ mod tests {
         // letting go 140 ms before the end still completes it
         let mut inputs = perfect_inputs(&c);
         let last = inputs.len() - 1;
-        inputs[last] = Input::Up { t: 3_860_000, button: 0 };
-        inputs[last - 1] = Input::Move { t: 3_860_000, x: 772, y: 450 };
+        inputs[last] = Input::Up {
+            t: 3_860_000,
+            button: 0,
+        };
+        inputs[last - 1] = Input::Move {
+            t: 3_860_000,
+            x: 772,
+            y: 450,
+        };
         assert_eq!(replay(c, &inputs).holds_done, 1);
     }
 
@@ -582,10 +671,17 @@ mod tests {
         let c = one(EASY);
         let mut p = Play::new(c);
         p.advance(1_900_000);
-        p.input(Input::Move { t: 1_990_000, x: 800, y: 450 });
+        p.input(Input::Move {
+            t: 1_990_000,
+            x: 800,
+            y: 450,
+        });
         // the frame arrives 30 ms after the press was made
         p.advance(2_020_000);
-        p.input(Input::Down { t: 1_990_000, button: 0 });
+        p.input(Input::Down {
+            t: 1_990_000,
+            button: 0,
+        });
         // the press is taken as happening at the latest time, 2.02 s
         assert_eq!(p.judged[0], Some(Judgement::Perfect));
         assert_eq!(p.feed[0].offset_us, 20_000);
@@ -593,15 +689,27 @@ mod tests {
 
     #[test]
     fn the_same_presses_judge_the_same_at_30_60_and_144_frames() {
-        let targets = (1..=8).map(|k| tap(k * 450, 400 + 100 * k as i32, 450, k as u32)).collect();
+        let targets = (1..=8)
+            .map(|k| tap(k * 450, 400 + 100 * k as i32, 450, k as u32))
+            .collect();
         let c = chart(MASTER, targets);
         // presses off by a different amount each, some missing
         let mut inputs = Vec::new();
         for (k, t) in c.targets.iter().enumerate() {
             let off = [0, 30_000, -60_000, 85_000, -10, 95_000, 20_000, -91_000][k];
-            inputs.push(Input::Move { t: t.t + off, x: t.x, y: t.y });
-            inputs.push(Input::Down { t: t.t + off, button: 0 });
-            inputs.push(Input::Up { t: t.t + off + 1, button: 0 });
+            inputs.push(Input::Move {
+                t: t.t + off,
+                x: t.x,
+                y: t.y,
+            });
+            inputs.push(Input::Down {
+                t: t.t + off,
+                button: 0,
+            });
+            inputs.push(Input::Up {
+                t: t.t + off + 1,
+                button: 0,
+            });
         }
         let run = |fps: i64| {
             let mut p = Play::new(c.clone());
@@ -624,6 +732,9 @@ mod tests {
         assert_eq!(at30, run(144));
         let judged: Vec<Judgement> = at30.0.iter().map(|j| j.expect("judged")).collect();
         use Judgement::*;
-        assert_eq!(judged, vec![Perfect, Great, Good, Good, Perfect, Miss, Perfect, Miss]);
+        assert_eq!(
+            judged,
+            vec![Perfect, Great, Good, Good, Perfect, Miss, Perfect, Miss]
+        );
     }
 }

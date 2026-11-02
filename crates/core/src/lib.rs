@@ -19,5 +19,6 @@ pub mod glossary;
 pub mod page;
 pub mod play;
 pub mod rng;
+pub mod save;
 pub mod sound;
 pub mod tuning;

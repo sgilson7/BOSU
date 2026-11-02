@@ -31,9 +31,17 @@ fn decode(path: &str) -> Vec<i16> {
         .output()
         .unwrap_or_else(|e| fail(&format!("cannot run ffmpeg (brew install ffmpeg): {e}")));
     if !out.status.success() {
-        fail(&format!("ffmpeg could not decode {path}: {}", String::from_utf8_lossy(&out.stderr)));
+        fail(&format!(
+            "ffmpeg could not decode {path}: {}",
+            String::from_utf8_lossy(&out.stderr)
+        ));
     }
-    out.stdout.chunks_exact(2).map(|b| i16::from_le_bytes([b[0], b[1]])).collect()
+    out.stdout
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|b| i16::from_le_bytes(*b))
+        .collect()
 }
 
 fn analysis_path(id: &str) -> String {
@@ -51,21 +59,40 @@ fn main() {
                 let a = beats::analyse(&samples).unwrap_or_else(|| fail(&format!("{}: no beat found", s.id)));
                 let text = serde_json::to_string(&a).unwrap_or_default() + "\n";
                 fs::write(analysis_path(&s.id), text).unwrap_or_else(|e| fail(&e.to_string()));
-                println!("{}: {}.{:03} bpm, first beat {} us, {} s", s.id, a.bpm_milli() / 1000, a.bpm_milli() % 1000, a.first_beat_us, a.length_us / 1_000_000);
+                println!(
+                    "{}: {}.{:03} bpm, first beat {} us, {} s",
+                    s.id,
+                    a.bpm_milli() / 1000,
+                    a.bpm_milli() % 1000,
+                    a.first_beat_us,
+                    a.length_us / 1_000_000
+                );
             }
         }
         "charts" | "check" => {
             let analyses: Vec<Analysis> = songs
                 .songs
                 .iter()
-                .map(|s| serde_json::from_str(&read(&analysis_path(&s.id))).unwrap_or_else(|e| fail(&format!("{}: {e}", s.id))))
+                .map(|s| {
+                    serde_json::from_str(&read(&analysis_path(&s.id)))
+                        .unwrap_or_else(|e| fail(&format!("{}: {e}", s.id)))
+                })
                 .collect();
-            let charts: Vec<Vec<(String, String)>> =
-                songs.songs.iter().zip(&analyses).map(|(s, a)| catalog::charts_for(s, a)).collect();
+            let charts: Vec<Vec<(String, String)>> = songs
+                .songs
+                .iter()
+                .zip(&analyses)
+                .map(|(s, a)| catalog::charts_for(s, a))
+                .collect();
             let audio_hashes: Vec<String> = songs
                 .songs
                 .iter()
-                .map(|s| catalog::fnv(&fs::read(format!("web/{}", s.audio)).unwrap_or_else(|e| fail(&format!("{}: {e}", s.audio)))))
+                .map(|s| {
+                    catalog::fnv(
+                        &fs::read(format!("web/{}", s.audio))
+                            .unwrap_or_else(|e| fail(&format!("{}: {e}", s.audio))),
+                    )
+                })
                 .collect();
             let index = catalog::index(&songs, &analyses, &charts, &audio_hashes);
             let mut files: Vec<(String, String)> = charts.into_iter().flatten().collect();
@@ -84,9 +111,19 @@ fn main() {
                 }
             }
             if stale > 0 {
-                fail(&format!("{stale} chart files are stale: run cargo run --release -p chart_tool -- charts"));
+                fail(&format!(
+                    "{stale} chart files are stale: run cargo run --release -p chart_tool -- charts"
+                ));
             }
-            println!("{} files {}", files.len(), if mode == "check" { "match the generator" } else { "written" });
+            println!(
+                "{} files {}",
+                files.len(),
+                if mode == "check" {
+                    "match the generator"
+                } else {
+                    "written"
+                }
+            );
         }
         _ => fail("usage: chart analyse | charts | check"),
     }

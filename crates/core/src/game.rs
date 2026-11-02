@@ -15,13 +15,13 @@
 //! the time the song was started at, minus the audio offset (BO-2).
 
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 
 use crate::catalog::Index;
 use crate::chart::Chart;
 use crate::draw::{Align, Color, DrawList, Shape, UNIT};
 use crate::page::{self, fill, grouped, minutes, percent, Strings};
 use crate::play::{Input, Judgement, Mark, Play, JUDGEMENTS};
+use crate::save::{self, Loaded, Save};
 use crate::tuning::{DIFFICULTIES, FIELD_H, FIELD_W};
 
 /// The shortest wait between pressing Start and the song's first sound.
@@ -68,6 +68,7 @@ impl Screen {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
 pub struct Settings {
     pub audio_offset_ms: i64,
     pub visual_offset_ms: i64,
@@ -77,11 +78,17 @@ pub struct Settings {
 
 impl Default for Settings {
     fn default() -> Self {
-        Settings { audio_offset_ms: 0, visual_offset_ms: 0, volume_pct: 80, name: String::new() }
+        Settings {
+            audio_offset_ms: 0,
+            visual_offset_ms: 0,
+            volume_pct: 80,
+            name: String::new(),
+        }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Best {
     pub score: i64,
     pub accuracy: i64,
@@ -92,17 +99,38 @@ pub struct Best {
 #[serde(rename_all = "snake_case")]
 pub enum Command {
     /// Fetch this file under `data/` and pass its text to `chart.loaded`.
-    LoadChart { url: String },
+    LoadChart {
+        url: String,
+    },
     /// Fetch and decode this audio file, then call `audio.ready` with the url.
-    LoadAudio { url: String },
+    LoadAudio {
+        url: String,
+    },
     /// Start the loaded song at this audio context time.
-    StartAudio { url: String, at_us: i64 },
+    StartAudio {
+        url: String,
+        at_us: i64,
+    },
     StopAudio,
     Suspend,
     Resume,
+    /// Keep this text in the browser (`web/save/store.js`).
+    Store {
+        text: String,
+    },
+    /// Keep this refused save beside the new one, never overwriting it.
+    KeepRefused {
+        text: String,
+    },
     /// Schedule `count` clicks, `every_us` apart, from `at_us`.
-    Clicks { at_us: i64, every_us: i64, count: i64 },
-    Volume { pct: i64 },
+    Clicks {
+        at_us: i64,
+        every_us: i64,
+        count: i64,
+    },
+    Volume {
+        pct: i64,
+    },
     /// The screen changed: draw `ui()` again.
     Ui,
 }
@@ -135,13 +163,6 @@ struct Outcome {
     ticks: (u32, u32),
     mean_offset_us: Option<i64>,
     new_best: bool,
-}
-
-/// The part of the game a save keeps.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
-pub struct Kept {
-    pub settings: Settings,
-    pub bests: BTreeMap<String, Best>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -203,7 +224,7 @@ pub struct Game {
     pub screen: Screen,
     song: usize,
     difficulty: usize,
-    pub kept: Kept,
+    pub kept: Save,
     chart: Option<(String, Chart)>,
     audio_ready: Option<String>,
     session: Option<Session>,
@@ -220,11 +241,24 @@ pub struct Game {
 }
 
 fn action(name: &str, value: impl ToString, label: String) -> Action {
-    Action { name: name.into(), value: value.to_string(), label, detail: String::new(), enabled: true, selected: false }
+    Action {
+        name: name.into(),
+        value: value.to_string(),
+        label,
+        detail: String::new(),
+        enabled: true,
+        selected: false,
+    }
 }
 
 fn panel(id: &str) -> Panel {
-    Panel { id: id.into(), heading: String::new(), lines: Vec::new(), actions: Vec::new(), field: None }
+    Panel {
+        id: id.into(),
+        heading: String::new(),
+        lines: Vec::new(),
+        actions: Vec::new(),
+        field: None,
+    }
 }
 
 fn signed_ms(ms: i64) -> String {
@@ -241,7 +275,10 @@ impl Game {
         let hints = crate::glossary::parse(glossary_md)
             .map_err(|e| e.message())?
             .into_iter()
-            .map(|e| Hint { term: e.term, definition: e.definition })
+            .map(|e| Hint {
+                term: e.term,
+                definition: e.definition,
+            })
             .collect();
         let index = crate::catalog::parse_index(index_json)?;
         if index.songs.is_empty() {
@@ -254,7 +291,7 @@ impl Game {
             screen: Screen::Title,
             song: 0,
             difficulty: 0,
-            kept: Kept::default(),
+            kept: crate::save::new_game(),
             chart: None,
             audio_ready: None,
             session: None,
@@ -312,7 +349,9 @@ impl Game {
             self.audio_ready = None;
             self.commands.push(Command::LoadAudio { url: audio_url });
         }
-        self.commands.push(Command::Volume { pct: self.kept.settings.volume_pct });
+        self.commands.push(Command::Volume {
+            pct: self.kept.settings.volume_pct,
+        });
         self.show(Screen::Loading);
     }
 
@@ -335,16 +374,26 @@ impl Game {
     pub fn act(&mut self, name: &str, value: &str) -> Result<(), String> {
         match name {
             "screen.show" => {
-                let screen = Screen::from_name(value).ok_or_else(|| format!("There is no screen \"{value}\"."))?;
+                let screen =
+                    Screen::from_name(value).ok_or_else(|| format!("There is no screen \"{value}\"."))?;
                 self.stop();
                 if screen == Screen::Calibrate {
-                    self.calibration = Some(Calibration { start_us: None, offsets: Vec::new(), now: 0, result: None });
-                    self.commands.push(Command::Volume { pct: self.kept.settings.volume_pct });
+                    self.calibration = Some(Calibration {
+                        start_us: None,
+                        offsets: Vec::new(),
+                        now: 0,
+                        result: None,
+                    });
+                    self.commands.push(Command::Volume {
+                        pct: self.kept.settings.volume_pct,
+                    });
                 }
                 self.show(screen);
             }
             "song.pick" => {
-                let k: usize = value.parse().map_err(|_| format!("There is no song \"{value}\"."))?;
+                let k: usize = value
+                    .parse()
+                    .map_err(|_| format!("There is no song \"{value}\"."))?;
                 if k >= self.index.songs.len() {
                     return Err(format!("There is no song \"{value}\"."));
                 }
@@ -374,10 +423,17 @@ impl Game {
                 let [song, diff, ms] = parts[..] else {
                     return Err(bad());
                 };
-                self.song = self.index.songs.iter().position(|s| s.id == song).ok_or_else(bad)?;
+                self.song = self
+                    .index
+                    .songs
+                    .iter()
+                    .position(|s| s.id == song)
+                    .ok_or_else(bad)?;
                 self.difficulty = DIFFICULTIES.iter().position(|d| d.key == diff).ok_or_else(bad)?;
                 self.tile_at_ms = Some(ms.parse().map_err(|_| bad())?);
-                self.commands.push(Command::LoadChart { url: self.chart_url() });
+                self.commands.push(Command::LoadChart {
+                    url: self.chart_url(),
+                });
             }
             "audio.ready" => self.audio_ready = Some(value.to_string()),
             "load.failed" => {
@@ -387,7 +443,11 @@ impl Game {
                 self.commands.push(Command::Ui);
             }
             "play.pause" | "page.hidden" => {
-                let running = self.session.as_ref().map(|s| s.start_us.is_some()).unwrap_or(false);
+                let running = self
+                    .session
+                    .as_ref()
+                    .map(|s| s.start_us.is_some())
+                    .unwrap_or(false);
                 if self.screen == Screen::Play && running && !self.paused {
                     self.paused = true;
                     self.commands.push(Command::Suspend);
@@ -419,16 +479,30 @@ impl Game {
                 self.show(Screen::Select);
             }
             "audio.less" | "audio.more" => {
-                Self::step(&mut self.kept.settings.audio_offset_ms, AUDIO_OFFSET_MS, name.ends_with("more"));
+                Self::step(
+                    &mut self.kept.settings.audio_offset_ms,
+                    AUDIO_OFFSET_MS,
+                    name.ends_with("more"),
+                );
                 self.commands.push(Command::Ui);
             }
             "visual.less" | "visual.more" => {
-                Self::step(&mut self.kept.settings.visual_offset_ms, VISUAL_OFFSET_MS, name.ends_with("more"));
+                Self::step(
+                    &mut self.kept.settings.visual_offset_ms,
+                    VISUAL_OFFSET_MS,
+                    name.ends_with("more"),
+                );
                 self.commands.push(Command::Ui);
             }
             "volume.less" | "volume.more" => {
-                Self::step(&mut self.kept.settings.volume_pct, VOLUME_PCT, name.ends_with("more"));
-                self.commands.push(Command::Volume { pct: self.kept.settings.volume_pct });
+                Self::step(
+                    &mut self.kept.settings.volume_pct,
+                    VOLUME_PCT,
+                    name.ends_with("more"),
+                );
+                self.commands.push(Command::Volume {
+                    pct: self.kept.settings.volume_pct,
+                });
                 self.commands.push(Command::Ui);
             }
             "name.set" => {
@@ -436,7 +510,11 @@ impl Game {
                 self.commands.push(Command::Ui);
             }
             "calibrate.again" => return self.act("screen.show", "calibrate"),
+            "save.loaded" => self.restore(value),
             other => return Err(format!("Unknown action \"{other}\".")),
+        }
+        if name.ends_with(".less") || name.ends_with(".more") || name == "name.set" {
+            self.keep();
         }
         Ok(())
     }
@@ -451,9 +529,23 @@ impl Game {
     /// a release. `x` and `y` are in the canvas's CSS pixels, `w` and `h` its
     /// size, so the playfield maps to any window.
     #[allow(clippy::too_many_arguments)]
-    pub fn input(&mut self, kind: u8, button: u8, x: i32, y: i32, w: i32, h: i32, ctx_us: i64, perf_us: i64, stamp_us: i64) {
+    pub fn input(
+        &mut self,
+        kind: u8,
+        button: u8,
+        x: i32,
+        y: i32,
+        w: i32,
+        h: i32,
+        ctx_us: i64,
+        perf_us: i64,
+        stamp_us: i64,
+    ) {
         if w > 0 && h > 0 {
-            self.pointer = ((x as i64 * FIELD_W as i64 / w as i64) as i32, (y as i64 * FIELD_H as i64 / h as i64) as i32);
+            self.pointer = (
+                (x as i64 * FIELD_W as i64 / w as i64) as i32,
+                (y as i64 * FIELD_H as i64 / h as i64) as i32,
+            );
         }
         let heard = Self::heard(ctx_us, perf_us, stamp_us);
         let offset = self.kept.settings.audio_offset_ms * MS;
@@ -462,13 +554,17 @@ impl Game {
                 if cal.result.is_none() {
                     let t = heard - start;
                     // the nearest click
-                    let k = ((t + CALIBRATION_BEAT_US / 2).div_euclid(CALIBRATION_BEAT_US)).clamp(0, CALIBRATION_CLICKS - 1);
+                    let k = ((t + CALIBRATION_BEAT_US / 2).div_euclid(CALIBRATION_BEAT_US))
+                        .clamp(0, CALIBRATION_CLICKS - 1);
                     cal.offsets.push(t - k * CALIBRATION_BEAT_US);
                     if cal.offsets.len() >= CALIBRATION_PRESSES {
                         let ms = median(&cal.offsets) / MS;
                         cal.result = Some(ms);
                         self.kept.settings.audio_offset_ms = ms.clamp(AUDIO_OFFSET_MS.0, AUDIO_OFFSET_MS.1);
                         self.commands.push(Command::StopAudio);
+                        self.commands.push(Command::Store {
+                            text: save::store(&self.kept),
+                        });
                     }
                     self.commands.push(Command::Ui);
                 }
@@ -486,7 +582,11 @@ impl Game {
             return;
         };
         let t = heard - start - offset;
-        session.play.input(Input::Move { t, x: pointer.0, y: pointer.1 });
+        session.play.input(Input::Move {
+            t,
+            x: pointer.0,
+            y: pointer.1,
+        });
         match kind {
             1 => session.play.input(Input::Down { t, button }),
             2 => session.play.input(Input::Up { t, button }),
@@ -517,8 +617,15 @@ impl Game {
         let first = chart.targets.first().map(|t| t.t).unwrap_or(0);
         let lead = LEAD_US.max(d.approach_us + FIRST_TARGET_MARGIN_US - first);
         let start = heard + lead;
-        self.session = Some(Session { play: Play::new(chart), start_us: Some(start), song_now: -lead });
-        self.commands.push(Command::StartAudio { url: self.audio_url(), at_us: start });
+        self.session = Some(Session {
+            play: Play::new(chart),
+            start_us: Some(start),
+            song_now: -lead,
+        });
+        self.commands.push(Command::StartAudio {
+            url: self.audio_url(),
+            at_us: start,
+        });
         self.show(Screen::Play);
     }
 
@@ -550,7 +657,14 @@ impl Game {
         let old = self.kept.bests.get(&key).copied();
         let new_best = old.map(|b| p.score > b.score).unwrap_or(true);
         if new_best {
-            self.kept.bests.insert(key, Best { score: p.score, accuracy: p.accuracy() });
+            self.kept.bests.insert(
+                key,
+                Best {
+                    score: p.score,
+                    accuracy: p.accuracy(),
+                },
+            );
+            self.keep();
         }
         self.outcome = Some(Outcome {
             song: self.song,
@@ -575,7 +689,11 @@ impl Game {
             None => {
                 let start = heard + LEAD_US;
                 cal.start_us = Some(start);
-                self.commands.push(Command::Clicks { at_us: start, every_us: CALIBRATION_BEAT_US, count: CALIBRATION_CLICKS });
+                self.commands.push(Command::Clicks {
+                    at_us: start,
+                    every_us: CALIBRATION_BEAT_US,
+                    count: CALIBRATION_CLICKS,
+                });
             }
             Some(start) => cal.now = heard - start,
         }
@@ -596,8 +714,10 @@ impl Game {
                 let mut p = panel("intro");
                 p.heading = self.s("title");
                 p.lines.push(self.s("intro"));
-                p.actions.push(action("screen.show", "select", self.s("menu.play")));
-                p.actions.push(action("screen.show", "settings", self.s("menu.settings")));
+                p.actions
+                    .push(action("screen.show", "select", self.s("menu.play")));
+                p.actions
+                    .push(action("screen.show", "settings", self.s("menu.settings")));
                 panels.push(p);
             }
             Screen::Select | Screen::Loading => {
@@ -622,10 +742,17 @@ impl Game {
                     let mut a = action("difficulty.pick", d.key, self.s(&format!("difficulty.{}", d.key)));
                     let targets = song.charts.get(k).map(|c| c.targets).unwrap_or(0);
                     let best = match self.kept.bests.get(&self.best_key(self.song, k)) {
-                        Some(b) => self.f("select.best", &[("score", grouped(b.score)), ("accuracy", percent(b.accuracy))]),
+                        Some(b) => self.f(
+                            "select.best",
+                            &[("score", grouped(b.score)), ("accuracy", percent(b.accuracy))],
+                        ),
                         None => self.s("select.unplayed"),
                     };
-                    a.detail = format!("{} · {}", self.f("select.targets", &[("n", grouped(targets as i64))]), best);
+                    a.detail = format!(
+                        "{} · {}",
+                        self.f("select.targets", &[("n", grouped(targets as i64))]),
+                        best
+                    );
                     a.selected = k == self.difficulty;
                     diff.actions.push(a);
                 }
@@ -637,7 +764,8 @@ impl Game {
                 let mut start = action("play.start", "", self.s("select.start"));
                 start.enabled = self.screen == Screen::Select;
                 go.actions.push(start);
-                go.actions.push(action("screen.show", "title", self.s("menu.back")));
+                go.actions
+                    .push(action("screen.show", "title", self.s("menu.back")));
                 panels.push(go);
             }
             Screen::Play => {
@@ -655,12 +783,20 @@ impl Game {
                     let mut p = panel("results");
                     let song = &self.index.songs[o.song];
                     let diff = self.s(&format!("difficulty.{}", DIFFICULTIES[o.difficulty].key));
-                    p.heading = self.f("results.heading", &[("song", song.title.clone()), ("difficulty", diff)]);
-                    p.lines.push(self.f("results.score", &[("score", grouped(o.score))]));
-                    p.lines.push(self.f("results.accuracy", &[("accuracy", percent(o.accuracy))]));
+                    p.heading = self.f(
+                        "results.heading",
+                        &[("song", song.title.clone()), ("difficulty", diff)],
+                    );
+                    p.lines
+                        .push(self.f("results.score", &[("score", grouped(o.score))]));
+                    p.lines
+                        .push(self.f("results.accuracy", &[("accuracy", percent(o.accuracy))]));
                     p.lines.push(self.f(
                         "results.combo",
-                        &[("n", grouped(o.max_combo as i64)), ("full", grouped(o.full_combo as i64))],
+                        &[
+                            ("n", grouped(o.max_combo as i64)),
+                            ("full", grouped(o.full_combo as i64)),
+                        ],
                     ));
                     let counts: Vec<(&str, String)> = JUDGEMENTS
                         .iter()
@@ -670,12 +806,17 @@ impl Game {
                     if o.ticks.1 > 0 {
                         p.lines.push(self.f(
                             "results.holds",
-                            &[("hit", grouped(o.ticks.0 as i64)), ("total", grouped(o.ticks.1 as i64))],
+                            &[
+                                ("hit", grouped(o.ticks.0 as i64)),
+                                ("total", grouped(o.ticks.1 as i64)),
+                            ],
                         ));
                     }
                     p.lines.push(match o.mean_offset_us {
                         None => self.s("results.timing.none"),
-                        Some(us) if us < 0 => self.f("results.timing.early", &[("ms", ((-us + 500) / MS).to_string())]),
+                        Some(us) if us < 0 => {
+                            self.f("results.timing.early", &[("ms", ((-us + 500) / MS).to_string())])
+                        }
                         Some(us) => self.f("results.timing.late", &[("ms", ((us + 500) / MS).to_string())]),
                     });
                     if o.new_best {
@@ -691,17 +832,29 @@ impl Game {
                 head.heading = self.s("settings.heading");
                 panels.push(head);
                 let rows = [
-                    ("audio", self.f("settings.audio", &[("ms", signed_ms(st.audio_offset_ms))])),
-                    ("visual", self.f("settings.visual", &[("ms", signed_ms(st.visual_offset_ms))])),
-                    ("volume", self.f("settings.volume", &[("pct", st.volume_pct.to_string())])),
+                    (
+                        "audio",
+                        self.f("settings.audio", &[("ms", signed_ms(st.audio_offset_ms))]),
+                    ),
+                    (
+                        "visual",
+                        self.f("settings.visual", &[("ms", signed_ms(st.visual_offset_ms))]),
+                    ),
+                    (
+                        "volume",
+                        self.f("settings.volume", &[("pct", st.volume_pct.to_string())]),
+                    ),
                 ];
                 for (id, line) in rows {
                     let mut p = panel(id);
                     p.lines.push(line);
-                    p.actions.push(action(&format!("{id}.less"), "", self.s("settings.less")));
-                    p.actions.push(action(&format!("{id}.more"), "", self.s("settings.more")));
+                    p.actions
+                        .push(action(&format!("{id}.less"), "", self.s("settings.less")));
+                    p.actions
+                        .push(action(&format!("{id}.more"), "", self.s("settings.more")));
                     if id == "audio" {
-                        p.actions.push(action("screen.show", "calibrate", self.s("settings.calibrate")));
+                        p.actions
+                            .push(action("screen.show", "calibrate", self.s("settings.calibrate")));
                     }
                     panels.push(p);
                 }
@@ -715,7 +868,8 @@ impl Game {
                 });
                 panels.push(name);
                 let mut back = panel("back");
-                back.actions.push(action("screen.show", "title", self.s("menu.back")));
+                back.actions
+                    .push(action("screen.show", "title", self.s("menu.back")));
                 panels.push(back);
             }
             Screen::Calibrate => {
@@ -724,10 +878,14 @@ impl Game {
                 if let Some(cal) = &self.calibration {
                     match cal.result {
                         None => {
-                            p.lines.push(self.f("calibrate.intro", &[("n", CALIBRATION_PRESSES.to_string())]));
+                            p.lines
+                                .push(self.f("calibrate.intro", &[("n", CALIBRATION_PRESSES.to_string())]));
                             p.lines.push(self.f(
                                 "calibrate.count",
-                                &[("n", cal.offsets.len().to_string()), ("total", CALIBRATION_PRESSES.to_string())],
+                                &[
+                                    ("n", cal.offsets.len().to_string()),
+                                    ("total", CALIBRATION_PRESSES.to_string()),
+                                ],
                             ));
                         }
                         Some(ms) => {
@@ -735,11 +893,13 @@ impl Game {
                                 "calibrate.result",
                                 &[("ms", ms.to_string()), ("offset", signed_ms(st.audio_offset_ms))],
                             ));
-                            p.actions.push(action("calibrate.again", "", self.s("calibrate.again")));
+                            p.actions
+                                .push(action("calibrate.again", "", self.s("calibrate.again")));
                         }
                     }
                 }
-                p.actions.push(action("screen.show", "settings", self.s("calibrate.done")));
+                p.actions
+                    .push(action("screen.show", "settings", self.s("calibrate.done")));
                 panels.push(p);
             }
         }
@@ -792,7 +952,11 @@ impl Game {
         }
         play.advance(t);
         self.pointer = play.cursor;
-        self.session = Some(Session { play, start_us: None, song_now: t });
+        self.session = Some(Session {
+            play,
+            start_us: None,
+            song_now: t,
+        });
         self.screen = Screen::Play;
         self.commands.push(Command::Ui);
         Ok(())
@@ -801,25 +965,43 @@ impl Game {
     /// How many targets of the play under way have a judgement, for the
     /// page's `data-judged` (the browser check reads it).
     pub fn judged(&self) -> u32 {
-        self.session.as_ref().map(|s| s.play.counts.iter().sum()).unwrap_or(0)
+        self.session
+            .as_ref()
+            .map(|s| s.play.counts.iter().sum())
+            .unwrap_or(0)
     }
 
-    pub fn kept_json(&self) -> String {
-        serde_json::to_string(&self.kept).unwrap_or_default()
+    fn keep(&mut self) {
+        self.commands.push(Command::Store {
+            text: save::store(&self.kept),
+        });
     }
 
-    /// Takes settings and bests from a save; a save that cannot be read is
-    /// ignored, and the message says so.
-    pub fn restore(&mut self, kept_json: &str) {
-        match serde_json::from_str::<Kept>(kept_json) {
-            Ok(mut k) => {
-                k.settings.audio_offset_ms = k.settings.audio_offset_ms.clamp(AUDIO_OFFSET_MS.0, AUDIO_OFFSET_MS.1);
-                k.settings.visual_offset_ms = k.settings.visual_offset_ms.clamp(VISUAL_OFFSET_MS.0, VISUAL_OFFSET_MS.1);
+    /// Takes settings and bests from the browser's save. A save this build
+    /// cannot use starts a new one; the old text is kept beside it and the
+    /// message says why.
+    pub fn restore(&mut self, text: &str) {
+        match save::load(text) {
+            Loaded::Fresh => self.kept = save::new_game(),
+            Loaded::Refused { why, kept } => {
+                self.kept = save::new_game();
+                self.message = self.s(why);
+                self.commands.push(Command::KeepRefused { text: kept });
+                self.commands.push(Command::Ui);
+            }
+            Loaded::Ready(mut k) => {
+                k.settings.audio_offset_ms = k
+                    .settings
+                    .audio_offset_ms
+                    .clamp(AUDIO_OFFSET_MS.0, AUDIO_OFFSET_MS.1);
+                k.settings.visual_offset_ms = k
+                    .settings
+                    .visual_offset_ms
+                    .clamp(VISUAL_OFFSET_MS.0, VISUAL_OFFSET_MS.1);
                 k.settings.volume_pct = k.settings.volume_pct.clamp(VOLUME_PCT.0, VOLUME_PCT.1);
                 k.settings.name = clean_name(&k.settings.name);
                 self.kept = k;
             }
-            Err(_) => self.kept = Kept::default(),
         }
     }
 }
@@ -828,7 +1010,12 @@ impl Game {
 /// characters.
 pub fn clean_name(raw: &str) -> String {
     let kept: String = raw.chars().filter(|c| !c.is_control()).collect();
-    kept.trim().chars().take(NAME_MAX).collect::<String>().trim_end().to_string()
+    kept.trim()
+        .chars()
+        .take(NAME_MAX)
+        .collect::<String>()
+        .trim_end()
+        .to_string()
 }
 
 fn median(values: &[i64]) -> i64 {
@@ -871,13 +1058,16 @@ pub fn draw_play(list: &mut DrawList, p: &Play, t: i64, heard: i64, strings: &St
             let target = &p.chart.targets[k];
             let shown = t >= target.t - d.approach_us;
             let open = p.judged[k].is_none() && t <= target.t + d.good_us;
-            let holding = p.judged[k].map(|j| j != Judgement::Miss).unwrap_or(false) && target.hold.is_some() && t <= target.end();
+            let holding = p.judged[k].map(|j| j != Judgement::Miss).unwrap_or(false)
+                && target.hold.is_some()
+                && t <= target.end();
             shown && (open || holding)
         })
         .collect();
     for &k in visible.iter().rev() {
         let target = &p.chart.targets[k];
-        let fade_in = ((t - (target.t - d.approach_us)) * UNIT as i64 / (d.approach_us / 3).max(1)).clamp(0, UNIT as i64) as i32;
+        let fade_in = ((t - (target.t - d.approach_us)) * UNIT as i64 / (d.approach_us / 3).max(1))
+            .clamp(0, UNIT as i64) as i32;
         list.alpha(fade_in);
         if let Some(h) = &target.hold {
             let pts: Vec<(i32, i32)> = h.path.iter().map(|q| (q[0], q[1])).collect();
@@ -891,7 +1081,14 @@ pub fn draw_play(list: &mut DrawList, p: &Play, t: i64, heard: i64, strings: &St
         let head_open = p.judged[k].is_none();
         if head_open {
             list.circle(target.x, target.y, r, Some(Color::Accent), Some(Color::Ink), 5);
-            list.text(target.x, target.y, r, Color::Paper, Align::Center, &target.combo.to_string());
+            list.text(
+                target.x,
+                target.y,
+                r,
+                Color::Paper,
+                Align::Center,
+                &target.combo.to_string(),
+            );
             // the approach ring meets the edge at the target's time
             let left = (target.t - t).max(0);
             let ring = r + (2 * r as i64 * left / d.approach_us) as i32;
@@ -899,7 +1096,14 @@ pub fn draw_play(list: &mut DrawList, p: &Play, t: i64, heard: i64, strings: &St
         } else {
             // a hold under way: the point to follow, and how far it may stray
             let (fx, fy) = target.point_at(t);
-            list.circle(fx, fy, r * crate::tuning::HOLD_FOLLOW_PCT / 100, None, Some(Color::Muted), 2);
+            list.circle(
+                fx,
+                fy,
+                r * crate::tuning::HOLD_FOLLOW_PCT / 100,
+                None,
+                Some(Color::Muted),
+                2,
+            );
             list.circle(fx, fy, r * 8 / 10, Some(Color::Accent), Some(Color::Ink), 4);
         }
     }
@@ -924,19 +1128,56 @@ pub fn draw_play(list: &mut DrawList, p: &Play, t: i64, heard: i64, strings: &St
                 list.circle(f.x, f.y, 10, Some(Color::Perfect), None, 0);
             }
             Mark::HoldDone => {
-                list.shape(Shape::Star, f.x, f.y - rise, r * UNIT * 7 / 10, Color::Perfect, Color::Ink, 2);
+                list.shape(
+                    Shape::Star,
+                    f.x,
+                    f.y - rise,
+                    r * UNIT * 7 / 10,
+                    Color::Perfect,
+                    Color::Ink,
+                    2,
+                );
             }
             Mark::HoldBroken => {
-                list.shape(Shape::Cross, f.x, f.y - rise, r * UNIT * 7 / 10, Color::Miss, Color::Ink, 2);
+                list.shape(
+                    Shape::Cross,
+                    f.x,
+                    f.y - rise,
+                    r * UNIT * 7 / 10,
+                    Color::Miss,
+                    Color::Ink,
+                    2,
+                );
             }
         }
     }
     list.alpha(UNIT);
     // score, accuracy and combo
-    list.text(FIELD_W - 40, 50, 44, Color::Ink, Align::Right, &fill(strings, "play.score", &[("score", grouped(p.score))]));
-    list.text(FIELD_W - 40, 96, 28, Color::Muted, Align::Right, &fill(strings, "play.accuracy", &[("accuracy", percent(p.accuracy()))]));
+    list.text(
+        FIELD_W - 40,
+        50,
+        44,
+        Color::Ink,
+        Align::Right,
+        &fill(strings, "play.score", &[("score", grouped(p.score))]),
+    );
+    list.text(
+        FIELD_W - 40,
+        96,
+        28,
+        Color::Muted,
+        Align::Right,
+        &fill(strings, "play.accuracy", &[("accuracy", percent(p.accuracy()))]),
+    );
     if p.combo > 0 {
-        list.text(40, FIELD_H - 50, 44, Color::Ink, Align::Left, &fill(strings, "play.combo", &[("n", grouped(p.combo as i64))]));
+        list.text(
+            40,
+            FIELD_H - 50,
+            44,
+            Color::Ink,
+            Align::Left,
+            &fill(strings, "play.combo", &[("n", grouped(p.combo as i64))]),
+        );
     }
     // the cursor
     list.circle(pointer.0, pointer.1, 12, None, Some(Color::Ink), 3);
@@ -948,8 +1189,20 @@ fn draw_calibration(list: &mut DrawList, now: i64, done: bool) {
     list.rect(0, 0, FIELD_W, FIELD_H, Color::Field);
     let (cx, cy) = (FIELD_W / 2, FIELD_H / 3);
     let into = now.rem_euclid(CALIBRATION_BEAT_US);
-    let pulse = if now >= 0 && !done { (120 - into * 120 / CALIBRATION_BEAT_US) as i32 } else { 0 };
+    let pulse = if now >= 0 && !done {
+        (120 - into * 120 / CALIBRATION_BEAT_US) as i32
+    } else {
+        0
+    };
     list.circle(cx, cy, 60 + pulse / 2, Some(Color::Accent), Some(Color::Ink), 5);
+}
+
+/// The shim's answer to an action: `{"ok":true}` or `{"error":"..."}`.
+pub fn result_json(r: Result<(), String>) -> String {
+    match r {
+        Ok(()) => serde_json::json!({ "ok": true }).to_string(),
+        Err(e) => serde_json::json!({ "error": e }).to_string(),
+    }
 }
 
 #[cfg(test)]
@@ -997,7 +1250,14 @@ mod tests {
         let c = commands(&mut g);
         assert_eq!(c[0]["load_chart"]["url"], "data/charts/s-easy.json?h=h0");
         assert_eq!(c[1]["load_audio"]["url"], "audio/s.mp3?h=a1");
-        let ch = chart(0, vec![tap(2000, 400, 400, 1), tap(3000, 600, 400, 2), tap(4000, 800, 400, 3)]);
+        let ch = chart(
+            0,
+            vec![
+                tap(2000, 400, 400, 1),
+                tap(3000, 600, 400, 2),
+                tap(4000, 800, 400, 3),
+            ],
+        );
         g.act("chart.loaded", &ch.to_json()).unwrap();
         g.frame(9_000_000, 0, 0);
         assert_eq!(g.screen, Screen::Loading, "no start before the audio is ready");
@@ -1016,16 +1276,49 @@ mod tests {
         let mut g = playing();
         // output timestamp: context 10.5 s heard at performance 100 s; the
         // press was 1.5 s later, so heard at 12.0 s: song time 3.0 s
-        g.input(0, 0, 600, 400, FIELD_W, FIELD_H, 10_500_000, 100_000_000, 101_500_000);
-        g.input(1, 0, 600, 400, FIELD_W, FIELD_H, 10_500_000, 100_000_000, 101_500_000);
+        g.input(
+            0,
+            0,
+            600,
+            400,
+            FIELD_W,
+            FIELD_H,
+            10_500_000,
+            100_000_000,
+            101_500_000,
+        );
+        g.input(
+            1,
+            0,
+            600,
+            400,
+            FIELD_W,
+            FIELD_H,
+            10_500_000,
+            100_000_000,
+            101_500_000,
+        );
         let p = &g.session.as_ref().unwrap().play;
         assert_eq!(p.judged[1], Some(Judgement::Perfect));
         assert_eq!(p.feed.last().unwrap().offset_us, 0);
         // with a +20 ms audio offset, the same press counts 20 ms earlier
         let mut g = playing();
         g.kept.settings.audio_offset_ms = 20;
-        g.input(1, 0, 600, 400, FIELD_W, FIELD_H, 10_500_000, 100_000_000, 101_500_000);
-        assert_eq!(g.session.as_ref().unwrap().play.feed.last().unwrap().offset_us, -20_000);
+        g.input(
+            1,
+            0,
+            600,
+            400,
+            FIELD_W,
+            FIELD_H,
+            10_500_000,
+            100_000_000,
+            101_500_000,
+        );
+        assert_eq!(
+            g.session.as_ref().unwrap().play.feed.last().unwrap().offset_us,
+            -20_000
+        );
     }
 
     #[test]
@@ -1045,8 +1338,16 @@ mod tests {
         assert_eq!(g.screen, Screen::Results);
         let ui = g.ui();
         assert_eq!(ui.panels[0].lines[0], "Score 0");
-        assert!(ui.panels[0].lines.contains(&"Perfect 0, Great 0, Good 0, Miss 3".to_string()));
-        assert_eq!(g.kept.bests.get("s:easy"), Some(&Best { score: 0, accuracy: 0 }));
+        assert!(ui.panels[0]
+            .lines
+            .contains(&"Perfect 0, Great 0, Good 0, Miss 3".to_string()));
+        assert_eq!(
+            g.kept.bests.get("s:easy"),
+            Some(&Best {
+                score: 0,
+                accuracy: 0
+            })
+        );
     }
 
     #[test]
@@ -1068,11 +1369,22 @@ mod tests {
         g.act("screen.show", "calibrate").unwrap();
         g.frame(5_000_000, 0, 0);
         let c = commands(&mut g);
-        let clicks = c.as_array().unwrap().iter().find(|c| c.get("clicks").is_some()).unwrap().clone();
+        let clicks = c
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|c| c.get("clicks").is_some())
+            .unwrap()
+            .clone();
         assert_eq!(clicks["clicks"]["at_us"], 6_000_000);
         for k in 0..CALIBRATION_PRESSES as i64 {
-            // late by 20 ms, give or take 3
-            let wobble = [0, 3, -3, 1][k as usize % 4];
+            // late by 20 ms, give or take 2, and one stray press 200 ms late
+            // that the median ignores
+            let wobble = if k == 15 {
+                180
+            } else {
+                [-2, 2, -1, 1][k as usize % 4]
+            };
             let at = 6_000_000 + (k + 2) * CALIBRATION_BEAT_US + 20_000 + wobble * 1000;
             g.input(1, 1, 0, 0, 0, 0, at, 0, 0);
         }
@@ -1091,6 +1403,19 @@ mod tests {
         assert_eq!(g.kept.settings.volume_pct, 0);
         g.act("visual.less", "").unwrap();
         assert_eq!(g.kept.settings.visual_offset_ms, -5);
+        let c = commands(&mut g);
+        let stored = c
+            .as_array()
+            .unwrap()
+            .iter()
+            .rev()
+            .find_map(|c| c.get("store"))
+            .unwrap()
+            .clone();
+        assert!(stored["text"]
+            .as_str()
+            .unwrap()
+            .contains("\"visual_offset_ms\":-5"));
     }
 
     #[test]
@@ -1104,19 +1429,28 @@ mod tests {
     #[test]
     fn a_save_from_any_build_restores_within_the_limits() {
         let mut g = game();
-        g.restore(r#"{"settings": {"audio_offset_ms": 900, "visual_offset_ms": 0, "volume_pct": 50, "name": "Cy"}, "bests": {"s:easy": {"score": 10, "accuracy": 9000}}}"#);
+        g.restore(r#"{"version": 1, "settings": {"audio_offset_ms": 900, "visual_offset_ms": 0, "volume_pct": 50, "name": "Cy"}, "bests": {"s:easy": {"score": 10, "accuracy": 9000}}}"#);
         assert_eq!(g.kept.settings.audio_offset_ms, 300);
         assert_eq!(g.kept.settings.name, "Cy");
         assert_eq!(g.kept.bests.len(), 1);
+        commands(&mut g);
         g.restore("not json");
-        assert_eq!(g.kept, Kept::default());
+        assert_eq!(g.kept, save::new_game());
+        assert_eq!(g.ui().message, "Your saved scores and settings could not be read. They are kept in this browser; a new save has started.");
+        assert_eq!(commands(&mut g)[0]["keep_refused"]["text"], "not json");
     }
 
     #[test]
     fn unknown_actions_and_screens_are_refused_by_name() {
         let mut g = game();
-        assert_eq!(g.act("screen.jump", ""), Err("Unknown action \"screen.jump\".".into()));
-        assert_eq!(g.act("screen.show", "nowhere"), Err("There is no screen \"nowhere\".".into()));
+        assert_eq!(
+            g.act("screen.jump", ""),
+            Err("Unknown action \"screen.jump\".".into())
+        );
+        assert_eq!(
+            g.act("screen.show", "nowhere"),
+            Err("There is no screen \"nowhere\".".into())
+        );
         assert_eq!(g.act("song.pick", "7"), Err("There is no song \"7\".".into()));
     }
 
@@ -1124,7 +1458,10 @@ mod tests {
     fn a_tile_spec_loads_its_chart_and_holds_the_scene() {
         let mut g = game();
         g.act("tile.spec", "s:hard:2500").unwrap();
-        assert_eq!(commands(&mut g)[0]["load_chart"]["url"], "data/charts/s-hard.json?h=h2");
+        assert_eq!(
+            commands(&mut g)[0]["load_chart"]["url"],
+            "data/charts/s-hard.json?h=h2"
+        );
         let ch = chart(2, vec![tap(2000, 400, 400, 1), tap(3000, 600, 400, 2)]);
         g.act("chart.loaded", &ch.to_json()).unwrap();
         assert_eq!(g.screen, Screen::Play);
@@ -1139,13 +1476,5 @@ mod tests {
         // song time 1.5 s: the first target is on screen
         let list = g.frame(10_500_000, 0, 0);
         assert!(crate::draw::walk(&list).unwrap() > 10);
-    }
-}
-
-/// The shim's answer to an action: `{"ok":true}` or `{"error":"..."}`.
-pub fn result_json(r: Result<(), String>) -> String {
-    match r {
-        Ok(()) => serde_json::json!({ "ok": true }).to_string(),
-        Err(e) => serde_json::json!({ "error": e }).to_string(),
     }
 }

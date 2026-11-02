@@ -8,6 +8,7 @@
 // never depends on when a frame ran (BO-2).
 import init, { Game, draw_assets } from "./pkg/tool_shim.js";
 import { createRenderer } from "./render2d.js";
+import * as store from "./save/store.js";
 
 const el = (id) => document.getElementById(id);
 const make = (tag, text) => {
@@ -117,6 +118,8 @@ const handlers = {
     audio.gain.gain.value = c.pct / assets.percent;
   },
   ui: () => render(),
+  store: (c) => store.write(c.text),
+  keep_refused: (c) => store.keepRefused(c.text),
 };
 
 // Each command is a name, or an object with one key: the name, holding
@@ -227,14 +230,22 @@ function listen() {
   });
   canvas.addEventListener("pointerdown", (e) => {
     track(e);
-    canvas.setPointerCapture(e.pointerId);
+    // a finger that slides off still releases where it lifts (kits/mobile)
+    try {
+      canvas.setPointerCapture(e.pointerId);
+    } catch (refused) {
+      // the press still counts; only the capture was refused
+    }
     send(assets.kinds.press, assets.mouse, e);
     e.preventDefault();
   });
+  const release = (e) => send(assets.kinds.release, assets.mouse, e);
   canvas.addEventListener("pointerup", (e) => {
     track(e);
-    send(assets.kinds.release, assets.mouse, e);
+    release(e);
   });
+  canvas.addEventListener("pointercancel", release);
+  canvas.addEventListener("lostpointercapture", release);
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());
   const keyButtons = assets.keys;
   window.addEventListener("keydown", (e) => {
@@ -261,6 +272,7 @@ async function main() {
   assets = JSON.parse(draw_assets());
   renderer = createRenderer(el("field"), assets);
   listen();
+  act("save.loaded", store.read());
   render();
   if (tileSpec) act("tile.spec", tileSpec);
   document.body.dataset.ready = "true";

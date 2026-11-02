@@ -64,6 +64,9 @@ pub const REQUIRED: &[&str] = &[
     "calibrate.result",
     "calibrate.done",
     "calibrate.again",
+    "save.unreadable",
+    "save.newer",
+    "save.no_step",
 ];
 
 pub type Strings = BTreeMap<String, String>;
@@ -114,7 +117,7 @@ pub fn grouped(n: i64) -> String {
     let digits = n.unsigned_abs().to_string();
     let mut out = String::new();
     for (k, c) in digits.chars().enumerate() {
-        if k > 0 && (digits.len() - k) % 3 == 0 {
+        if k > 0 && (digits.len() - k).is_multiple_of(3) {
             out.push(',');
         }
         out.push(c);
@@ -183,7 +186,12 @@ mod tests {
         assert_eq!(percent(10_000), "100.00%");
         assert_eq!(percent(9705), "97.05%");
         assert_eq!(minutes(75_400_000), "1:15");
-        let s: Strings = [("a".to_string(), "{n} of {total}".to_string())].into_iter().collect();
-        assert_eq!(fill(&s, "a", &[("n", "3".into()), ("total", "8".into())]), "3 of 8");
+        let s: Strings = [("a".to_string(), "{n} of {total}".to_string())]
+            .into_iter()
+            .collect();
+        assert_eq!(
+            fill(&s, "a", &[("n", "3".into()), ("total", "8".into())]),
+            "3 of 8"
+        );
     }
 }

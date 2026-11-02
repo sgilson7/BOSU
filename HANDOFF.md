@@ -4,27 +4,47 @@ Stage 9, written by the agent. `C5 Consolidate in your own words`. A fresh sessi
 
 ## What this is
 
-Five sentences at most: what the tool does, for whom, and where it lives.
+Countless Days: an original browser rhythm game, press each target as its ring closes, for the person and their friends, on five songs from their album at five difficulties. Rounds 1 to 3 (solo play) are built on five placeholder songs; the lobby (round 4), the ledger (round 5) and the art (round 6) are not. Repository BOSU; deployed to GitHub Pages from `dist/`.
 
 ## Rules that hold it up
 
-The rules that break silently if a later change ignores them, and the test that guards each.
+| Rule | Guarded by |
+| --- | --- |
+| Judgements use each input's own audio time, never the frame's (BO-2) | `the_same_presses_judge_the_same_at_30_60_and_144_frames`, `song_time_is_the_heard_time_less_the_start_and_the_offset` |
+| Committed charts are what the generator writes (BO-6) | `the_committed_charts_match_the_generator` |
+| A perfect bot clears every chart (BO-4) | `every_chart_is_cleared_by_a_perfect_bot` |
+| Each difficulty is harder (BO-5) | `each_committed_difficulty_is_harder_than_the_one_below` |
+| Every deployed save loads | `old_saves.rs`, with `tests/saves/v1.json` |
 
 ## Shape of the code
 
-Where each kind of thing lives, in a short table.
+| Where | What |
+| --- | --- |
+| `crates/core/src/play.rs` | judging, holds, score, combo, accuracy, the perfect bot |
+| `crates/core/src/game.rs` | screens, settings, the audio clock, calibration, the play screen's draw list |
+| `crates/core/src/beats.rs`, `generate.rs`, `catalog.rs` | beat finding, chart layout, the chart index |
+| `crates/core/src/tuning.rs` | every number of play |
+| `crates/chart_tool` | build-time ffmpeg decoding and file writing |
+| `web/app.js` | carries out the core's commands; forwards events with timestamps |
+| `data/songs.json` | the song list people edit; `data/charts/` is generated |
 
 ## Commands
 
-Build, test, check, publish, and the probes, with what each prints when it passes.
+- `./scripts/check.sh`: prints `BUILDER CHECK PASSED`.
+- New songs: put the MP3 in `web/audio/`, list it in `data/songs.json`, then `cargo run --release -p chart_tool -- analyse` and `-- charts`. `-- check` says whether the charts are stale.
+- `tools/placeholders/make.sh`: remakes the placeholder songs (needs ffmpeg).
+- `.venv/bin/python tests/browser/probe_frames.py chromium firefox webkit`: frame times (BO-11).
+- `python3 scripts/break_tests.py`: 37 of 37 caught.
 
 ## What will bite within the hour
 
-What a new session gets wrong first.
+- Changing `beats.rs`, `generate.rs` or `tuning.rs` changes the charts: regenerate them, or `the_committed_charts_match_the_generator` fails.
+- The core may not name `time`, `env` or `f64`; use `at()` and other names.
+- A change to the save's fields needs a version bump and a step in `save.rs`'s `migrate` (kits/saves).
 
 ## The journal
 
-Where the design journal is, its link if it is published, and its newest entry.
+`../bosu-journal/`, published privately at https://claude.ai/artifact/2RGq94P6vWrVUS8mksQgHR.
 
 ## Open for the person
 
@@ -36,6 +56,9 @@ Every `SECOND-ORDER.md` row with status *person*, by number, with what the perso
 - R2.1: the exact SoundCloud playlist link (BO-Q12, T1). Given 2026-11-02.
 - R2.4: the plan's questions, BO-Q12 to BO-Q17. Answered 2026-11-02.
 - R3.1: the five audio files: downloads turned on for each track, or the files in BrowserOSU/songs/ (BO-Q18).
+- R3.11: whether Easy is busy enough, after playing it.
+- R3.12: the placeholder songs' titles, which go when the real songs arrive.
+- R3.13: a licence for the code, if you want one.
 
 ## Mistakes so far
 

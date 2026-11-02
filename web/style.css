@@ -31,6 +31,7 @@
 /* A display rule elsewhere must not show what the page hid. */
 [hidden] { display: none !important; }
 html, body { height: 100%; }
+html { touch-action: manipulation; }
 body {
   margin: 0;
   background: var(--paper);

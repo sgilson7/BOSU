@@ -102,13 +102,21 @@ pub fn chart(song: &str, a: &Analysis, difficulty: usize, seed: u64) -> Chart {
             let turn = rng.between(-swing, swing);
             let angle = heading + turn;
             // the wanted distance first; then any distance the difficulty allows
-            let len = if attempt < TRIES / 3 { want } else { rng.between(min_sep as i32, d.max_jump as i32) as i64 };
+            let len = if attempt < TRIES / 3 {
+                want
+            } else {
+                rng.between(min_sep as i32, d.max_jump as i32) as i64
+            };
             let x = from.0 + fx::round(fx::mul(fx::cos(angle), fx::from_int(len as i32)));
             let y = from.1 + fx::round(fx::mul(fx::sin(angle), fx::from_int(len as i32)));
             if !inside(x, y) {
                 continue;
             }
-            let room = visible.iter().map(|&v| dist2(v, (x, y))).min().unwrap_or(i64::MAX);
+            let room = visible
+                .iter()
+                .map(|&v| dist2(v, (x, y)))
+                .min()
+                .unwrap_or(i64::MAX);
             if best.map(|b| room > b.2).unwrap_or(true) {
                 best = Some(((x, y), angle, room));
             }
@@ -142,7 +150,11 @@ pub fn chart(song: &str, a: &Analysis, difficulty: usize, seed: u64) -> Chart {
                     let step = (reach / 2) as i32;
                     let nx = p.0 + fx::round(fx::mul(fx::cos(dir), fx::from_int(step)));
                     let ny = p.1 + fx::round(fx::mul(fx::sin(dir), fx::from_int(step)));
-                    let (nx, ny) = if inside(nx, ny) { (nx, ny) } else { (p.0 - (nx - p.0), p.1 - (ny - p.1)) };
+                    let (nx, ny) = if inside(nx, ny) {
+                        (nx, ny)
+                    } else {
+                        (p.0 - (nx - p.0), p.1 - (ny - p.1))
+                    };
                     let (nx, ny) = (nx.clamp(X_MIN, X_MAX), ny.clamp(Y_MIN, Y_MAX));
                     path.push([nx, ny]);
                     p = (nx, ny);
@@ -151,7 +163,13 @@ pub fn chart(song: &str, a: &Analysis, difficulty: usize, seed: u64) -> Chart {
                 hold = Some(Hold { end, path });
             }
         }
-        targets.push(Target { t, x: spot.0, y: spot.1, combo, hold });
+        targets.push(Target {
+            t,
+            x: spot.0,
+            y: spot.1,
+            combo,
+            hold,
+        });
         k += 1;
     }
     Chart {
@@ -210,7 +228,11 @@ pub mod tests {
     fn generation_is_the_same_every_time() {
         let a = busy_song(128, 40, 11);
         assert_eq!(all(&a), all(&busy_song(128, 40, 11)));
-        assert_ne!(chart("test", &a, 2, 7), chart("test", &a, 2, 8), "the seed matters");
+        assert_ne!(
+            chart("test", &a, 2, 7),
+            chart("test", &a, 2, 8),
+            "the seed matters"
+        );
     }
 
     #[test]
@@ -265,11 +287,19 @@ pub mod tests {
             let step = a.beat_us / d.grid;
             for t in &c.targets {
                 let off = (t.t - a.first_beat_us) * d.grid % a.beat_us;
-                assert!(off * 1000 / a.beat_us < 5 || (a.beat_us - off) * 1000 / a.beat_us < 5, "{} off grid by {off}", d.key);
+                assert!(
+                    off * 1000 / a.beat_us < 5 || (a.beat_us - off) * 1000 / a.beat_us < 5,
+                    "{} off grid by {off}",
+                    d.key
+                );
                 let _ = step;
             }
             for pair in c.targets.windows(2) {
-                assert!(pair[1].t - pair[0].end() >= d.min_gap_us.min(pair[1].t - pair[0].t), "{}", d.key);
+                assert!(
+                    pair[1].t - pair[0].end() >= d.min_gap_us.min(pair[1].t - pair[0].t),
+                    "{}",
+                    d.key
+                );
                 assert!(pair[1].t - pair[0].t >= d.min_gap_us, "{}", d.key);
             }
         }
@@ -281,8 +311,21 @@ pub mod tests {
             let charts = all(&busy_song(bpm, 60, seed));
             for pair in charts.windows(2) {
                 let (lo, hi) = (load(&pair[0]), load(&pair[1]));
-                assert!(hi.0 > lo.0, "{bpm} bpm: {} has {} targets a minute, {} has {}", DIFFICULTIES[pair[1].difficulty].key, hi.0, DIFFICULTIES[pair[0].difficulty].key, lo.0);
-                assert!(hi.1 > lo.1, "{bpm} bpm: {} moves {} a second, below {}", DIFFICULTIES[pair[1].difficulty].key, hi.1, lo.1);
+                assert!(
+                    hi.0 > lo.0,
+                    "{bpm} bpm: {} has {} targets a minute, {} has {}",
+                    DIFFICULTIES[pair[1].difficulty].key,
+                    hi.0,
+                    DIFFICULTIES[pair[0].difficulty].key,
+                    lo.0
+                );
+                assert!(
+                    hi.1 > lo.1,
+                    "{bpm} bpm: {} moves {} a second, below {}",
+                    DIFFICULTIES[pair[1].difficulty].key,
+                    hi.1,
+                    lo.1
+                );
             }
         }
     }

@@ -68,4 +68,9 @@ These stay with the person and go in `BRIEF.md` or `PLAN.md`:
 
 | Default | Changed to | Reason | Recorded in |
 | --- | --- | --- | --- |
-| | | | |
+| D17 | `web/save/store.js` keeps the core's save text in `localStorage` and offers it as a file; no other page file names browser storage | the brief keeps progress: bests and offsets (BO-Q10, kits/saves) | `crates/core/tests/storage_fence.rs`, `crates/core/tests/old_saves.rs`; PLAN.md decision 14 |
+| D7 | The browser check runs `webkit-iphone` and `webkit-ipad` by default beside the three engines | the game plays by touch on tablets and phones (BO-Q7, kits/mobile) | `tests/browser/check.py`; R3.7 |
+| D7 | The page scan skips media files under `web/` (`MEDIA` in `boundary.rs`: mp3, png, jpg, webp); every other file must still be text and is still scanned | the songs are MP3 files, which hold no script and no address | R3.6 |
+| D3 | `web/render2d.js` sizes its backing store to the canvas's displayed size and scales the playfield to fit, and gains `circle` and `alpha` ops | a rhythm game fills the window; targets are circles that fade in | `crates/core/src/draw.rs` tests; R3.5 |
+| D11 | Unchanged so far: release `opt-level = "s"`. The frame probe (BO-11) shows no frame over 20 ms at this level | | MEASUREMENTS.md |
+| — | A third workspace crate, `crates/chart_tool`, does input and output at build time (ffmpeg, files) and holds no rule | charts are generated at build time and committed (BO-6) | PLAN.md decision 11 |

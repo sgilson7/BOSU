@@ -56,5 +56,8 @@
   "calibrate.count": "{n} of {total} presses",
   "calibrate.result": "Your presses came {ms} ms after the clicks. The audio offset is now {offset} ms.",
   "calibrate.done": "Done",
-  "calibrate.again": "Again"
+  "calibrate.again": "Again",
+  "save.unreadable": "Your saved scores and settings could not be read. They are kept in this browser; a new save has started.",
+  "save.newer": "Your saved scores come from a newer version of the game. They are kept in this browser; a new save has started.",
+  "save.no_step": "Your saved scores come from a version this one cannot update. They are kept in this browser; a new save has started."
 }

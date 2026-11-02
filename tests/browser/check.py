@@ -20,7 +20,7 @@ feature the interactions never start is a feature this check never saw.
 
 Environment:
     BUILDER_ENGINES   space-separated engines (default "chromium firefox webkit");
-                      add "webkit-iphone" for WebKit as an iPhone 15 with touch.
+                      "webkit-iphone" and "webkit-ipad" are WebKit with touch.
                       CI may run "chromium" alone (D7); run all three locally
                       before a push.
     BUILDER_IDLE      seconds to idle after load (default 10)
@@ -39,7 +39,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 DIST = ROOT / "dist"
-ENGINES = os.environ.get("BUILDER_ENGINES", "chromium firefox webkit").split()
+ENGINES = os.environ.get("BUILDER_ENGINES", "chromium firefox webkit webkit-iphone webkit-ipad").split()
 IDLE_MS = int(float(os.environ.get("BUILDER_IDLE", "10")) * 1000)
 
 failures = []
@@ -91,7 +91,9 @@ def run_engine(p, engine, base, interactions):
     # phone viewport). Emulation shows layout and touch events; it cannot show
     # real multitouch, fullscreen or install, which stay a person's check.
     launcher, _, device = engine.partition("-")
-    profile = dict(p.devices["iPhone 15"]) if device == "iphone" else {}
+    # "webkit-ipad": the tablet pass kits/mobile adds (D7, BO-Q7)
+    devices = {"iphone": "iPhone 15", "ipad": "iPad Pro 11 landscape"}
+    profile = dict(p.devices[devices[device]]) if device else {}
     browser = getattr(p, launcher).launch()
     context = browser.new_context(accept_downloads=True, **profile)
     context.on("request", lambda r: None if same_origin(r.url) else seen["foreign"].append(r.url))

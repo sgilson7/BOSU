@@ -45,7 +45,18 @@ impl Game {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn input(&mut self, kind: u8, button: u8, x: f64, y: f64, w: f64, h: f64, ctx_s: f64, perf_ms: f64, stamp_ms: f64) {
+    pub fn input(
+        &mut self,
+        kind: u8,
+        button: u8,
+        x: f64,
+        y: f64,
+        w: f64,
+        h: f64,
+        ctx_s: f64,
+        perf_ms: f64,
+        stamp_ms: f64,
+    ) {
         self.inner.input(
             kind,
             button,
@@ -60,7 +71,11 @@ impl Game {
     }
 
     pub fn frame(&mut self, ctx_s: f64, perf_ms: f64, now_ms: f64) -> Vec<i32> {
-        self.inner.frame((ctx_s * 1_000_000.0) as i64, (perf_ms * 1000.0) as i64, (now_ms * 1000.0) as i64)
+        self.inner.frame(
+            (ctx_s * 1_000_000.0) as i64,
+            (perf_ms * 1000.0) as i64,
+            (now_ms * 1000.0) as i64,
+        )
     }
 
     pub fn tile(&mut self, chart_json: &str, at_ms: f64) -> String {
@@ -73,14 +88,6 @@ impl Game {
 
     pub fn judged(&self) -> u32 {
         self.inner.judged()
-    }
-
-    pub fn kept(&self) -> String {
-        self.inner.kept_json()
-    }
-
-    pub fn restore(&mut self, kept_json: &str) {
-        self.inner.restore(kept_json)
     }
 
     pub fn click_wav(&self) -> Vec<u8> {

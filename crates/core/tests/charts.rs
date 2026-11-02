@@ -25,9 +25,12 @@ fn songs() -> Vec<(catalog::Song, Analysis, Vec<Chart>)> {
         .songs
         .into_iter()
         .map(|s| {
-            let a: Analysis = serde_json::from_str(&read(&format!("data/analysis/{}.json", s.id))).expect("analysis");
+            let a: Analysis =
+                serde_json::from_str(&read(&format!("data/analysis/{}.json", s.id))).expect("analysis");
             let charts = (0..DIFFICULTIES.len())
-                .map(|d| Chart::parse(&read(&format!("data/{}", catalog::chart_file(&s.id, d)))).expect("chart"))
+                .map(|d| {
+                    Chart::parse(&read(&format!("data/{}", catalog::chart_file(&s.id, d)))).expect("chart")
+                })
                 .collect();
             (s, a, charts)
         })
@@ -49,7 +52,11 @@ fn there_are_five_songs_with_five_charts_each() {
 fn the_committed_charts_match_the_generator() {
     for (s, a, charts) in songs() {
         for (d, (path, text)) in catalog::charts_for(&s, &a).into_iter().enumerate() {
-            assert_eq!(read(&format!("data/{path}")), text, "{path}: run cargo run --release -p chart_tool -- charts");
+            assert_eq!(
+                read(&format!("data/{path}")),
+                text,
+                "{path}: run cargo run --release -p chart_tool -- charts"
+            );
             assert_eq!(charts[d], Chart::parse(&text).expect("parses"));
         }
     }
@@ -61,7 +68,12 @@ fn every_chart_is_cleared_by_a_perfect_bot() {
         for c in charts {
             let p = replay(c.clone(), &perfect_inputs(&c));
             let key = DIFFICULTIES[c.difficulty].key;
-            assert_eq!(p.counts[Judgement::Perfect as usize] as usize, c.targets.len(), "{} {key}", s.id);
+            assert_eq!(
+                p.counts[Judgement::Perfect as usize] as usize,
+                c.targets.len(),
+                "{} {key}",
+                s.id
+            );
             assert_eq!(p.max_combo, p.full_combo(), "{} {key}: combo broken", s.id);
         }
     }
@@ -73,8 +85,20 @@ fn each_committed_difficulty_is_harder_than_the_one_below() {
         for pair in charts.windows(2) {
             let (lo, hi) = (generate::load(&pair[0]), generate::load(&pair[1]));
             let key = DIFFICULTIES[pair[1].difficulty].key;
-            assert!(hi.0 > lo.0, "{} {key}: {} targets a minute against {}", s.id, hi.0, lo.0);
-            assert!(hi.1 > lo.1, "{} {key}: moves {} a second against {}", s.id, hi.1, lo.1);
+            assert!(
+                hi.0 > lo.0,
+                "{} {key}: {} targets a minute against {}",
+                s.id,
+                hi.0,
+                lo.0
+            );
+            assert!(
+                hi.1 > lo.1,
+                "{} {key}: moves {} a second against {}",
+                s.id,
+                hi.1,
+                lo.1
+            );
         }
     }
 }
@@ -89,7 +113,14 @@ fn no_two_visible_targets_overlap_in_a_committed_chart() {
                 for p in &c.targets[..k] {
                     if p.end() + d.good_us >= t.t - d.approach_us {
                         let (dx, dy) = ((p.x - t.x) as i64, (p.y - t.y) as i64);
-                        assert!(dx * dx + dy * dy >= sep * sep, "{} {}: {} and {} us", s.id, d.key, p.t, t.t);
+                        assert!(
+                            dx * dx + dy * dy >= sep * sep,
+                            "{} {}: {} and {} us",
+                            s.id,
+                            d.key,
+                            p.t,
+                            t.t
+                        );
                     }
                 }
             }

@@ -132,7 +132,6 @@ pub const SHAPES: [&[&[[i32; 2]]]; 4] = [
     ]],
 ];
 
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Align {
     Left = 0,
@@ -216,9 +215,18 @@ impl DrawList {
     }
 
     /// A circle; `None` leaves the fill or the stroke out.
-    pub fn circle(&mut self, x: i32, y: i32, r: i32, fill: Option<Color>, stroke: Option<Color>, width: i32) -> &mut Self {
+    pub fn circle(
+        &mut self,
+        x: i32,
+        y: i32,
+        r: i32,
+        fill: Option<Color>,
+        stroke: Option<Color>,
+        width: i32,
+    ) -> &mut Self {
         let role = |c: Option<Color>| c.map(|c| c as i32).unwrap_or(NONE);
-        self.out.extend([Op::Circle as i32, x, y, r, role(fill), role(stroke), width]);
+        self.out
+            .extend([Op::Circle as i32, x, y, r, role(fill), role(stroke), width]);
         self
     }
 

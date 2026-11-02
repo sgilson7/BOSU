@@ -69,7 +69,9 @@ impl ChartError {
             ChartError::OutOfOrder(k) => format!("Target {k} is not later than the one before it."),
             ChartError::Outside(k) => format!("Target {k} lies outside the playfield."),
             ChartError::BadCombo(k) => format!("Target {k} has no combo number."),
-            ChartError::BadHold(k) => format!("Target {k}'s hold has a path that does not start on it or ends before it."),
+            ChartError::BadHold(k) => {
+                format!("Target {k}'s hold has a path that does not start on it or ends before it.")
+            }
             ChartError::InsideHold(k) => format!("Target {k} starts before the hold before it ends."),
             ChartError::PastEnd(k) => format!("Target {k} ends after the song."),
         }
@@ -101,11 +103,13 @@ impl Chart {
         let mut busy_until = i64::MIN;
         for (k, t) in self.targets.iter().enumerate() {
             if t.t <= busy_until || t.t < 0 {
-                return Err(if k > 0 && self.targets[k - 1].hold.is_some() && t.t > self.targets[k - 1].t {
-                    ChartError::InsideHold(k)
-                } else {
-                    ChartError::OutOfOrder(k)
-                });
+                return Err(
+                    if k > 0 && self.targets[k - 1].hold.is_some() && t.t > self.targets[k - 1].t {
+                        ChartError::InsideHold(k)
+                    } else {
+                        ChartError::OutOfOrder(k)
+                    },
+                );
             }
             if !inside(t.x, t.y) {
                 return Err(ChartError::Outside(k));
@@ -164,12 +168,25 @@ pub mod tests {
     use super::*;
 
     pub fn tap(t_ms: i64, x: i32, y: i32, combo: u32) -> Target {
-        Target { t: t_ms * 1000, x, y, combo, hold: None }
+        Target {
+            t: t_ms * 1000,
+            x,
+            y,
+            combo,
+            hold: None,
+        }
     }
 
     pub fn chart(difficulty: usize, targets: Vec<Target>) -> Chart {
         let length_us = targets.last().map(|t| t.end()).unwrap_or(0) + 2_000_000;
-        Chart { song: "test".into(), difficulty, beat_us: 500_000, first_beat_us: 0, length_us, targets }
+        Chart {
+            song: "test".into(),
+            difficulty,
+            beat_us: 500_000,
+            first_beat_us: 0,
+            length_us,
+            targets,
+        }
     }
 
     #[test]
@@ -180,7 +197,10 @@ pub mod tests {
             x: 800,
             y: 500,
             combo: 3,
-            hold: Some(Hold { end: 4_000_000, path: vec![[800, 500], [1000, 500]] }),
+            hold: Some(Hold {
+                end: 4_000_000,
+                path: vec![[800, 500], [1000, 500]],
+            }),
         });
         c.length_us = 6_000_000;
         let back = Chart::parse(&c.to_json()).expect("parses");
@@ -193,7 +213,10 @@ pub mod tests {
         assert_eq!(c.check(), Err(ChartError::Outside(1)));
         let c = chart(0, vec![tap(1000, 400, 841, 1)]);
         assert_eq!(c.check(), Err(ChartError::Outside(0)));
-        assert_eq!(ChartError::Outside(1).message(), "Target 1 lies outside the playfield.");
+        assert_eq!(
+            ChartError::Outside(1).message(),
+            "Target 1 lies outside the playfield."
+        );
     }
 
     #[test]
@@ -201,16 +224,25 @@ pub mod tests {
         let c = chart(0, vec![tap(2000, 400, 400, 1), tap(2000, 600, 400, 2)]);
         assert_eq!(c.check(), Err(ChartError::OutOfOrder(1)));
         let mut c = chart(0, vec![tap(1000, 400, 400, 1), tap(1500, 600, 400, 2)]);
-        c.targets[0].hold = Some(Hold { end: 1_600_000, path: vec![[400, 400], [500, 400]] });
+        c.targets[0].hold = Some(Hold {
+            end: 1_600_000,
+            path: vec![[400, 400], [500, 400]],
+        });
         assert_eq!(c.check(), Err(ChartError::InsideHold(1)));
     }
 
     #[test]
     fn a_hold_whose_path_does_not_start_on_its_target_is_refused() {
         let mut c = chart(0, vec![tap(1000, 400, 400, 1)]);
-        c.targets[0].hold = Some(Hold { end: 2_000_000, path: vec![[410, 400], [500, 400]] });
+        c.targets[0].hold = Some(Hold {
+            end: 2_000_000,
+            path: vec![[410, 400], [500, 400]],
+        });
         assert_eq!(c.check(), Err(ChartError::BadHold(0)));
-        c.targets[0].hold = Some(Hold { end: 1_000_000, path: vec![[400, 400], [500, 400]] });
+        c.targets[0].hold = Some(Hold {
+            end: 1_000_000,
+            path: vec![[400, 400], [500, 400]],
+        });
         assert_eq!(c.check(), Err(ChartError::BadHold(0)));
     }
 
@@ -221,7 +253,10 @@ pub mod tests {
             x: 400,
             y: 400,
             combo: 1,
-            hold: Some(Hold { end: 3_000_000, path: vec![[400, 400], [600, 400], [600, 600]] }),
+            hold: Some(Hold {
+                end: 3_000_000,
+                path: vec![[400, 400], [600, 400], [600, 600]],
+            }),
         };
         assert_eq!(t.point_at(0), (400, 400));
         assert_eq!(t.point_at(1_500_000), (500, 400));
