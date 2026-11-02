@@ -15,10 +15,11 @@ One row per assumption, surprise or open item. **Kind** is *divergence* (what wa
 | R1.5 | finding | The core can take time from the page as a frame timestamp (kits/realtime). | A rhythm game's clock is the audio's, not the frame's: judging hits by frame time moves every judgement by the audio output latency and by any dropped frame. | The page passes the audio clock's time (in microseconds, converted in the shim as the realtime kit does) with each input; the core judges against it. | BO-4, a test to write | open |
 | R1.6 | worklist | The questions in the opening entry. | Eleven answer chips, BO-Q1 to BO-Q11. | | | person |
 | R1.7 | finding | The baseline check runs on an untouched template. | `BRIEF.md` was rewritten while the setup and check ran, so the baseline is the template plus this brief, as in Idle Game. | Recorded in the measured part of the opening entry. | | done |
-| R2.1 | worklist | BO-Q2: B, the songs come from the playlist on gearmaster (T1). | The address still answers SoundCloud's not-found page on 2026-11-02 (checked by page and by oEmbed). | The exact link is BO-Q12; rounds 1 to 3 build on five placeholder songs I generate. | | person |
+| R2.1 | worklist | BO-Q2: B, the songs come from the playlist on gearmaster (T1). | The address still answers SoundCloud's not-found page on 2026-11-02 (checked by page and by oEmbed). | The exact link is BO-Q12; rounds 1 to 3 build on five placeholder songs I generate. The link came in the BO-Q12 note and works; what is left is R3.1. | | done |
 | R2.2 | finding | The build machine can decode MP3. | ffmpeg is not installed; Homebrew is. | Round 2 installs ffmpeg with Homebrew for `tools/chart`; the game never needs it. | | open |
 | R2.3 | divergence | T2 asks for "some form of blockchain". | Spreading scores needs a merge-only set of records with ids, not mining or one agreed chain. | Planned as the ledger (PLAN.md 17 to 20); trust, size and names are BO-Q13 to BO-Q15. | | open |
-| R2.4 | worklist | The plan's questions. | BO-Q12 to BO-Q17, on the journal's plan page. | | | person |
+| R2.4 | worklist | The plan's questions. | BO-Q12 to BO-Q17, on the journal's plan page. Answered 2026-11-02; BO-Q13 B is T3. | | | done |
+| R3.1 | worklist | With the right link, the songs can be downloaded from SoundCloud (T1). | soundcloud.com/leefy5/sets/countless-days-in-ableton lists BoneCereal and Monke Walkin' (Leefy5), bunko carnival (cay-wagner), Grunge Dome and Lime Cruncher (user-449148713). All five are marked not downloadable, so I took nothing. | The files come by downloads turned on or by the person's own copies (BO-Q18). Placeholders until then. | | person |
 
 ## Strings written by the agent
 
