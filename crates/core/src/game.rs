@@ -655,7 +655,8 @@ impl Game {
         let p = session.play;
         let key = self.best_key(self.song, self.difficulty);
         let old = self.kept.bests.get(&key).copied();
-        let new_best = old.map(|b| p.score > b.score).unwrap_or(true);
+        // a play that scored nothing is not a best
+        let new_best = p.score > old.map(|b| b.score).unwrap_or(0);
         if new_best {
             self.kept.bests.insert(
                 key,
@@ -1341,13 +1342,10 @@ mod tests {
         assert!(ui.panels[0]
             .lines
             .contains(&"Perfect 0, Great 0, Good 0, Miss 3".to_string()));
-        assert_eq!(
-            g.kept.bests.get("s:easy"),
-            Some(&Best {
-                score: 0,
-                accuracy: 0
-            })
-        );
+        assert_eq!(g.kept.bests.get("s:easy"), None, "a score of 0 is no best");
+        assert!(!ui.panels[0]
+            .lines
+            .contains(&"A new best for this chart.".to_string()));
     }
 
     #[test]
