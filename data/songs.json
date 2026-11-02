@@ -1,0 +1,9 @@
+{
+  "songs": [
+    {"id": "placeholder-1", "title": "Placeholder 1", "by": "BOSU", "audio": "audio/placeholder-1.mp3", "seed": 1},
+    {"id": "placeholder-2", "title": "Placeholder 2", "by": "BOSU", "audio": "audio/placeholder-2.mp3", "seed": 2},
+    {"id": "placeholder-3", "title": "Placeholder 3", "by": "BOSU", "audio": "audio/placeholder-3.mp3", "seed": 3},
+    {"id": "placeholder-4", "title": "Placeholder 4", "by": "BOSU", "audio": "audio/placeholder-4.mp3", "seed": 4},
+    {"id": "placeholder-5", "title": "Placeholder 5", "by": "BOSU", "audio": "audio/placeholder-5.mp3", "seed": 5}
+  ]
+}

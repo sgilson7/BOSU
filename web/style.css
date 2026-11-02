@@ -1,24 +1,106 @@
+/* Colours by role. The canvas reads --<role> for each role the core's
+   draw list names (crates/core/src/draw.rs, PALETTE). */
 :root {
-  --ink: #1d232a;
-  --paper: #ffffff;
-  --muted: #5a646e;
-  --accent: #9b1c1c;
+  --paper: #f4efe6;
+  --ink: #22201c;
+  --muted: #6b645a;
+  --accent: #e0603a;
+  --field: #ebe3d4;
+  --perfect: #23825f;
+  --great: #2f62c9;
+  --good: #b5841c;
+  --miss: #c23b3b;
+  --hold: #e0603a;
+  color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --ink: #e8eaed; --paper: #15181c; --muted: #a9b1ba; --accent: #f08c8c; }
+  :root {
+    --paper: #16140f;
+    --ink: #f2ece1;
+    --muted: #a59d90;
+    --accent: #f07a52;
+    --field: #211e17;
+    --perfect: #4cc394;
+    --great: #7aa2f0;
+    --good: #e0b54d;
+    --miss: #f07272;
+    --hold: #f07a52;
+  }
 }
 * { box-sizing: border-box; }
 /* A display rule elsewhere must not show what the page hid. */
 [hidden] { display: none !important; }
+html, body { height: 100%; }
 body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
   font: 1rem/1.5 system-ui, sans-serif;
 }
-main { max-width: 44rem; margin: 0 auto; padding: 2rem 1rem; }
-h1 { font-size: 1.6rem; margin: 0 0 0.5rem; }
-#message:not(:empty) { color: var(--accent); }
+main { max-width: 46rem; margin: 0 auto; padding: 2rem 1rem; position: relative; }
+h1 { font-size: 2rem; margin: 0 0 0.5rem; letter-spacing: 0.02em; }
+h2 { font-size: 1.2rem; margin: 1rem 0 0.5rem; }
+#message:not(:empty) { color: var(--miss); }
 section { margin: 0 0 1rem; }
-button { font: inherit; padding: 0.3rem 0.8rem; margin: 0 0.5rem 0.5rem 0; }
+.actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+button {
+  font: inherit;
+  color: var(--ink);
+  background: var(--field);
+  border: 2px solid var(--ink);
+  border-radius: 0.6rem;
+  padding: 0.45rem 0.9rem;
+  cursor: pointer;
+  text-align: left;
+}
+button small { display: block; color: var(--muted); font-size: 0.8rem; }
+button[aria-pressed="true"] { background: var(--accent); color: var(--paper); }
+button[aria-pressed="true"] small { color: var(--paper); }
+button:disabled { opacity: 0.5; cursor: default; }
+#songs .actions, #difficulty .actions { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); }
+.field label { display: flex; gap: 0.5rem; align-items: center; }
+.field input { font: inherit; padding: 0.3rem 0.5rem; border: 2px solid var(--ink); border-radius: 0.4rem; background: var(--paper); color: var(--ink); }
+.field p { color: var(--muted); font-size: 0.9rem; }
 [data-term] { text-decoration: underline dotted; cursor: help; }
+
+/* The playfield: hidden on menu screens, filling the window at 16:9 when
+   the core says the canvas shows. */
+#field {
+  display: none;
+  touch-action: none;
+  cursor: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+body[data-canvas="true"] { overflow: hidden; }
+body[data-canvas="true"] #field {
+  display: block;
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(100vw, calc(100vh * 16 / 9));
+  height: min(100vh, calc(100vw * 9 / 16));
+}
+body[data-canvas="true"] h1 { display: none; }
+body[data-screen="play"] main { pointer-events: none; }
+body[data-screen="play"][data-paused="true"] main {
+  pointer-events: auto;
+  position: fixed;
+  inset: 0;
+  max-width: none;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--paper) 80%, transparent);
+}
+body[data-screen="calibrate"] main {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-width: 40rem;
+  background: var(--paper);
+  border-top: 2px solid var(--ink);
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}

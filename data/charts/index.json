@@ -1,0 +1,209 @@
+{
+  "songs": [
+    {
+      "id": "placeholder-1",
+      "title": "Placeholder 1",
+      "by": "BOSU",
+      "audio": "audio/placeholder-1.mp3",
+      "audio_hash": "b0597e9307a12e45",
+      "bpm_milli": 100007,
+      "length_us": 70000000,
+      "charts": [
+        {
+          "difficulty": 0,
+          "file": "charts/placeholder-1-easy.json",
+          "hash": "9a5cda376f473e9a",
+          "targets": 27
+        },
+        {
+          "difficulty": 1,
+          "file": "charts/placeholder-1-normal.json",
+          "hash": "e3d421b598d30b04",
+          "targets": 87
+        },
+        {
+          "difficulty": 2,
+          "file": "charts/placeholder-1-hard.json",
+          "hash": "a5e83b9a880df8a1",
+          "targets": 141
+        },
+        {
+          "difficulty": 3,
+          "file": "charts/placeholder-1-expert.json",
+          "hash": "090c43b613effb73",
+          "targets": 175
+        },
+        {
+          "difficulty": 4,
+          "file": "charts/placeholder-1-master.json",
+          "hash": "657587255dc40ed8",
+          "targets": 202
+        }
+      ]
+    },
+    {
+      "id": "placeholder-2",
+      "title": "Placeholder 2",
+      "by": "BOSU",
+      "audio": "audio/placeholder-2.mp3",
+      "audio_hash": "f71d5b9c9dab98d8",
+      "bpm_milli": 118007,
+      "length_us": 75000000,
+      "charts": [
+        {
+          "difficulty": 0,
+          "file": "charts/placeholder-2-easy.json",
+          "hash": "ce10a78f7d552265",
+          "targets": 38
+        },
+        {
+          "difficulty": 1,
+          "file": "charts/placeholder-2-normal.json",
+          "hash": "08762a1d00328f7a",
+          "targets": 111
+        },
+        {
+          "difficulty": 2,
+          "file": "charts/placeholder-2-hard.json",
+          "hash": "dd0a048fd691deaf",
+          "targets": 138
+        },
+        {
+          "difficulty": 3,
+          "file": "charts/placeholder-2-expert.json",
+          "hash": "631c5267b69ba160",
+          "targets": 240
+        },
+        {
+          "difficulty": 4,
+          "file": "charts/placeholder-2-master.json",
+          "hash": "744c44d99c977e1b",
+          "targets": 282
+        }
+      ]
+    },
+    {
+      "id": "placeholder-3",
+      "title": "Placeholder 3",
+      "by": "BOSU",
+      "audio": "audio/placeholder-3.mp3",
+      "audio_hash": "4d0bce42b682d036",
+      "bpm_milli": 132006,
+      "length_us": 80000000,
+      "charts": [
+        {
+          "difficulty": 0,
+          "file": "charts/placeholder-3-easy.json",
+          "hash": "32823ccdc1f8598e",
+          "targets": 43
+        },
+        {
+          "difficulty": 1,
+          "file": "charts/placeholder-3-normal.json",
+          "hash": "e4106c161fc47f39",
+          "targets": 123
+        },
+        {
+          "difficulty": 2,
+          "file": "charts/placeholder-3-hard.json",
+          "hash": "2ee9469ca0662db6",
+          "targets": 155
+        },
+        {
+          "difficulty": 3,
+          "file": "charts/placeholder-3-expert.json",
+          "hash": "14476993f91442c1",
+          "targets": 255
+        },
+        {
+          "difficulty": 4,
+          "file": "charts/placeholder-3-master.json",
+          "hash": "39b87d99e27d4e6c",
+          "targets": 276
+        }
+      ]
+    },
+    {
+      "id": "placeholder-4",
+      "title": "Placeholder 4",
+      "by": "BOSU",
+      "audio": "audio/placeholder-4.mp3",
+      "audio_hash": "95038fba70e77f4f",
+      "bpm_milli": 150008,
+      "length_us": 80000000,
+      "charts": [
+        {
+          "difficulty": 0,
+          "file": "charts/placeholder-4-easy.json",
+          "hash": "0b9cb5d31625816e",
+          "targets": 47
+        },
+        {
+          "difficulty": 1,
+          "file": "charts/placeholder-4-normal.json",
+          "hash": "6350e7dd0fe7749e",
+          "targets": 77
+        },
+        {
+          "difficulty": 2,
+          "file": "charts/placeholder-4-hard.json",
+          "hash": "f98cd4d64a564528",
+          "targets": 160
+        },
+        {
+          "difficulty": 3,
+          "file": "charts/placeholder-4-expert.json",
+          "hash": "031ab9aed05d494a",
+          "targets": 238
+        },
+        {
+          "difficulty": 4,
+          "file": "charts/placeholder-4-master.json",
+          "hash": "0ffbb8e572fd289d",
+          "targets": 267
+        }
+      ]
+    },
+    {
+      "id": "placeholder-5",
+      "title": "Placeholder 5",
+      "by": "BOSU",
+      "audio": "audio/placeholder-5.mp3",
+      "audio_hash": "f25ffe93a297d7b9",
+      "bpm_milli": 172007,
+      "length_us": 85000000,
+      "charts": [
+        {
+          "difficulty": 0,
+          "file": "charts/placeholder-5-easy.json",
+          "hash": "0acefe511148738b",
+          "targets": 51
+        },
+        {
+          "difficulty": 1,
+          "file": "charts/placeholder-5-normal.json",
+          "hash": "d961674330f91672",
+          "targets": 86
+        },
+        {
+          "difficulty": 2,
+          "file": "charts/placeholder-5-hard.json",
+          "hash": "7321b0a8be7e8882",
+          "targets": 207
+        },
+        {
+          "difficulty": 3,
+          "file": "charts/placeholder-5-expert.json",
+          "hash": "812a2425cc2d3aaf",
+          "targets": 293
+        },
+        {
+          "difficulty": 4,
+          "file": "charts/placeholder-5-master.json",
+          "hash": "beb7f95c2f43ccac",
+          "targets": 325
+        }
+      ]
+    }
+  ]
+}

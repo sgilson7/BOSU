@@ -130,6 +130,10 @@ const PAGE_NAVIGATION: &[&str] = &[
     "window.open",
 ];
 
+/// Media files under web/ that the page scan skips: audio and images carry no
+/// script and no address.
+const MEDIA: &[&str] = &["mp3", "png", "jpg", "webp"];
+
 /// Absolute URLs that are names, not addresses: the page may write them.
 const ALLOWED_ABSOLUTE_URLS: &[&str] = &["http://www.w3.org/2000/svg"];
 
@@ -712,6 +716,12 @@ fn page_keeps_no_rule_and_names_no_other_origin() {
     let mut problems = Vec::new();
     let mut js_files = 0;
     for path in web_files() {
+        // media files hold no code and no address; every other file must be
+        // text (R3.6)
+        let media = path.extension().map(|x| MEDIA.iter().any(|m| x == *m)).unwrap_or(false);
+        if media {
+            continue;
+        }
         let text = fs::read_to_string(&path).expect("read page file");
         for (n, line) in text.lines().enumerate() {
             if without_allowed_urls(line).contains("://") {

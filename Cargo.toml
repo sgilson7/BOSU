@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/core", "crates/shim"]
+members = ["crates/core", "crates/shim", "crates/chart_tool"]
 
 # Reference default (D11). Size first; a project with a per-frame loop may
 # change opt-level to 3 and add codegen-units = 1, recorded in BUILDER-SPEC.md.

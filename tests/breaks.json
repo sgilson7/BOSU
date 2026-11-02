@@ -8,9 +8,114 @@
   },
   {
     "name": "an unknown action is refused",
-    "file": "crates/core/src/api.rs",
+    "file": "crates/core/src/game.rs",
     "find": "other => return Err(format!(\"Unknown action \\\"{other}\\\".\")),",
     "replace": "_ => {}",
-    "test": "act_refuses_an_unknown_action"
+    "test": "unknown_actions_and_screens_are_refused_by_name"
+  },
+  {
+    "name": "the perfect window is inclusive",
+    "file": "crates/core/src/play.rs",
+    "find": "let j = if off.abs() <= d.perfect_us {",
+    "replace": "let j = if off.abs() < d.perfect_us {",
+    "test": "easy_window_edges_on_both_sides"
+  },
+  {
+    "name": "the great window decides great",
+    "file": "crates/core/src/play.rs",
+    "find": "} else if off.abs() <= d.great_us {",
+    "replace": "} else if off.abs() < d.perfect_us {",
+    "test": "master_window_edges_on_both_sides"
+  },
+  {
+    "name": "a press outside the good window is no hit",
+    "file": "crates/core/src/play.rs",
+    "find": "&& (t - target.t).abs() <= d.good_us",
+    "replace": "&& (t - target.t).abs() <= d.good_us + 1",
+    "test": "easy_window_edges_on_both_sides"
+  },
+  {
+    "name": "a press must land inside the circle",
+    "file": "crates/core/src/play.rs",
+    "find": "&& within(self.cursor, (target.x, target.y), d.radius)",
+    "replace": "&& within(self.cursor, (target.x, target.y), d.radius + 1)",
+    "test": "a_press_must_land_inside_the_circle"
+  },
+  {
+    "name": "overlapping targets take the earlier",
+    "file": "crates/core/src/play.rs",
+    "find": "            .find(|&k| {",
+    "replace": "            .filter(|&k| {",
+    "test": "two_overlapping_targets_take_the_earlier_first"
+  },
+  {
+    "name": "a held button presses once",
+    "file": "crates/core/src/play.rs",
+    "find": "        if self.held & bit != 0 {\n            return;\n        }",
+    "replace": "",
+    "test": "holding_a_key_down_presses_once"
+  },
+  {
+    "name": "a miss resets the combo",
+    "file": "crates/core/src/play.rs",
+    "find": "        if j == Judgement::Miss {\n            self.combo = 0;",
+    "replace": "        if j == Judgement::Miss {",
+    "test": "hand_worked_score_for_ten_targets_with_one_miss"
+  },
+  {
+    "name": "the multiplier is capped",
+    "file": "crates/core/src/play.rs",
+    "find": "(self.combo as i64).min(COMBO_CAP)",
+    "replace": "(self.combo as i64)",
+    "test": "the_multiplier_stops_growing_at_a_combo_of_100"
+  },
+  {
+    "name": "a tick off the path breaks the combo",
+    "file": "crates/core/src/play.rs",
+    "find": "                        } else {\n                            self.combo = 0;\n                        }",
+    "replace": "                        } else {\n                        }",
+    "test": "leaving_the_path_breaks_the_combo"
+  },
+  {
+    "name": "letting go early breaks the hold",
+    "file": "crates/core/src/play.rs",
+    "find": "let in_window = t >= end - self.d.good_us;",
+    "replace": "let in_window = true;",
+    "test": "letting_go_early_misses_the_end"
+  },
+  {
+    "name": "hold ticks score",
+    "file": "crates/core/src/play.rs",
+    "find": "self.score += TICK_POINTS;",
+    "replace": "",
+    "test": "a_hold_followed_to_the_end_scores_every_tick"
+  },
+  {
+    "name": "inputs use their own times",
+    "file": "crates/core/src/play.rs",
+    "find": "let t = input.at().max(self.now);",
+    "replace": "let t = self.now.max(0);",
+    "test": "the_same_presses_judge_the_same_at_30_60_and_144_frames"
+  },
+  {
+    "name": "a target outside the field is refused",
+    "file": "crates/core/src/chart.rs",
+    "find": "(X_MIN..=X_MAX).contains(&x) && (Y_MIN..=Y_MAX).contains(&y)",
+    "replace": "(X_MIN..=X_MAX).contains(&x)",
+    "test": "a_chart_with_a_target_outside_the_playfield_is_refused"
+  },
+  {
+    "name": "a hold path starts on its target",
+    "file": "crates/core/src/chart.rs",
+    "find": "if h.end <= t.t || h.path.len() < 2 || !starts_here {",
+    "replace": "if h.end <= t.t || h.path.len() < 2 {",
+    "test": "a_hold_whose_path_does_not_start_on_its_target_is_refused"
+  },
+  {
+    "name": "a hold point moves along the path",
+    "file": "crates/core/src/chart.rs",
+    "find": "let i = (along / span).min(last - 1) as usize;",
+    "replace": "let i = 0usize;",
+    "test": "a_hold_point_moves_evenly_along_its_path"
   }
 ]
