@@ -46,3 +46,12 @@ def run(page, check, engine):
     page.click("button[data-action='audio.more']")
     want = STRINGS["settings.audio"].replace("{ms}", "+5")
     check(page.inner_text("#audio p") == want, f"the audio offset reads {want}")
+
+    # press keys: add W by pressing it, then the line lists it
+    page.click("button[data-action='keys.listen']")
+    page.wait_for_selector("#keys p:nth-of-type(2)")
+    page.keyboard.press("w")
+    want = STRINGS["settings.keys"].replace("{keys}", "Z, X, W")
+    page.wait_for_selector(f"#keys p:text-is('{want}')")
+    check(True, f"pressing W while listening adds it: {want}")
+    page.click("button[data-action='keys.reset']")

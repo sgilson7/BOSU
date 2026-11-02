@@ -267,7 +267,6 @@ pub fn assets() -> String {
         "percent": 100,
         // what `game::input` takes: the kind of event, and a button per key
         "kinds": {"move": 0, "press": 1, "release": 2},
-        "keys": {"z": 1, "x": 2},
         "mouse": 0,
         "unit": UNIT,
         "aligns": ALIGNS,

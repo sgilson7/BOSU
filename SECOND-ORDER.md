@@ -31,7 +31,8 @@ One row per assumption, surprise or open item. **Kind** is *divergence* (what wa
 | R3.10 | finding | The game decodes MP3 the way the chart tool does. | ffmpeg removes the encoder's delay at the start of an MP3 using its LAME header; Chrome and Firefox do too, Safari may not. A constant shift is what the audio offset and calibration absorb. | Charts are analysed from the same MP3 the page plays. | | open |
 | R3.11 | worklist | Easy has about one target every two to three seconds on the placeholders (27 in 70 s). | Whether that is too sparse is a matter of feel. | Play it and file a triage row if Easy should be busier; `keep_pct` in `tuning.rs` is the number. | | person |
 | R3.12 | worklist | The placeholder songs' titles ("Placeholder 1" to "5", "by BOSU"). | Names a player reads are the person's (BO-10); they go when the real songs arrive. | | | person |
-| R3.13 | worklist | The repository is public with no LICENSE file. | Without one, the code is all rights reserved, the safe default; choosing a licence is the person's. | | | person |
+| R3.13 | worklist | The repository is public with no LICENSE file. | Without one, the code is all rights reserved, the safe default; choosing a licence is the person's. | The person chose MIT on 2026-11-02 ("please add mit license"); `LICENSE`. | LICENSE, LICENSES.md | done |
+| R4.1 | divergence | Press keys are Z and X, fixed in the page (`assets.keys`). | The person plays with W, A, S and D in one hand and aims with the other (T4). | Every key goes to the core by its `KeyboardEvent.code`; the press keys, up to eight, live in the save (version 2, migrated from 1), and the mouse can be set to aim only. Codes, not letters, so a key keeps its place on any keyboard layout. | `game.rs` key tests; `tests/saves/v2-wasd.json` | done |
 
 ## Strings written by the agent
 

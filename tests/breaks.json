@@ -257,5 +257,40 @@
     "find": "        if k > 0 && (digits.len() - k).is_multiple_of(3) {",
     "replace": "        if false {",
     "test": "numbers_are_formatted_by_hand_worked_cases"
+  },
+  {
+    "name": "a bound key presses",
+    "file": "crates/core/src/game.rs",
+    "find": "        self.input(kind, (k + 1) as u8, 0, 0, 0, 0, ctx_us, perf_us, stamp_us);\n        true",
+    "replace": "        let _ = k;\n        true",
+    "test": "w_a_s_d_can_replace_z_and_x_and_each_presses"
+  },
+  {
+    "name": "a bound key is not bound twice",
+    "file": "crates/core/src/game.rs",
+    "find": "            if keys.iter().any(|k| k == code) {",
+    "replace": "            if false {",
+    "test": "a_key_already_bound_is_refused_and_escape_cancels"
+  },
+  {
+    "name": "press keys are capped",
+    "file": "crates/core/src/game.rs",
+    "find": "                if self.kept.settings.keys.len() >= MAX_KEYS {",
+    "replace": "                if false {",
+    "test": "there_are_at_most_eight_press_keys"
+  },
+  {
+    "name": "the mouse may only aim",
+    "file": "crates/core/src/game.rs",
+    "find": "        let kind = if button == MOUSE && !self.kept.settings.mouse_presses {",
+    "replace": "        let kind = if false {",
+    "test": "with_the_mouse_set_to_aim_only_a_click_moves_and_does_not_press"
+  },
+  {
+    "name": "a version one save is migrated",
+    "file": "crates/core/src/save.rs",
+    "find": "        1 => {\n            let settings",
+    "replace": "        9 => {\n            let settings",
+    "test": "a_version_one_save_keeps_its_settings_and_gets_z_and_x"
   }
 ]

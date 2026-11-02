@@ -247,18 +247,17 @@ function listen() {
   canvas.addEventListener("pointercancel", release);
   canvas.addEventListener("lostpointercapture", release);
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());
-  const keyButtons = assets.keys;
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") act("key.escape");
-    const id = keyButtons[e.key.toLowerCase()];
-    if (id === undefined || e.repeat || e.target.tagName === "INPUT") return;
+  // every key goes to the core by its code; the core knows the press keys
+  // (Settings) and says whether a key was its own
+  const key = (kind, e) => {
+    if (e.target.tagName === "INPUT") return;
     ensureAudio();
-    send(assets.kinds.press, id, e);
-  });
-  window.addEventListener("keyup", (e) => {
-    const id = keyButtons[e.key.toLowerCase()];
-    if (id !== undefined) send(assets.kinds.release, id, e);
-  });
+    const [contextTime, performanceTime] = clock();
+    if (game.key(kind, e.code, contextTime, performanceTime, e.timeStamp)) e.preventDefault();
+    runCommands();
+  };
+  window.addEventListener("keydown", (e) => key(assets.kinds.press, e));
+  window.addEventListener("keyup", (e) => key(assets.kinds.release, e));
   window.addEventListener("resize", () => ui.canvas && renderer.resize());
   document.addEventListener("visibilitychange", () => document.hidden && act("page.hidden"));
 }

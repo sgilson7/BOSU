@@ -42,6 +42,8 @@ pub const CALIBRATION_PRESSES: usize = 16;
 pub const CALIBRATION_CLICKS: i64 = 64;
 
 const MS: i64 = 1000;
+/// The button number of the mouse or a touch.
+pub const MOUSE: u8 = 0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -74,6 +76,44 @@ pub struct Settings {
     pub visual_offset_ms: i64,
     pub volume_pct: i64,
     pub name: String,
+    /// The press keys, as `KeyboardEvent.code` values ("KeyZ", "KeyW"):
+    /// the key's place on the keyboard, whatever its layout prints on it.
+    pub keys: Vec<String>,
+    /// Whether a mouse button or a touch presses as well as aiming.
+    pub mouse_presses: bool,
+}
+
+/// The press keys a new player starts with.
+pub fn default_keys() -> Vec<String> {
+    vec!["KeyZ".into(), "KeyX".into()]
+}
+
+/// How many press keys a player may have. Button 0 is the mouse; keys are
+/// buttons 1 up.
+pub const MAX_KEYS: usize = 8;
+/// The one key that is never a press key: it pauses and cancels.
+pub const ESCAPE: &str = "Escape";
+
+/// What a player reads for a key code: "KeyW" is "W", "Digit1" is "1",
+/// "ArrowLeft" is "Left", "ShiftLeft" is "Left Shift"; others as given.
+pub fn key_label(code: &str) -> String {
+    if let Some(k) = code.strip_prefix("Key").or_else(|| code.strip_prefix("Digit")) {
+        return k.to_string();
+    }
+    if let Some(k) = code.strip_prefix("Arrow") {
+        return k.to_string();
+    }
+    if let Some(k) = code.strip_prefix("Numpad") {
+        return format!("Numpad {k}");
+    }
+    for side in ["Left", "Right"] {
+        if let Some(k) = code.strip_suffix(side) {
+            if !k.is_empty() {
+                return format!("{side} {k}");
+            }
+        }
+    }
+    code.to_string()
 }
 
 impl Default for Settings {
@@ -82,6 +122,8 @@ impl Default for Settings {
             audio_offset_ms: 0,
             visual_offset_ms: 0,
             volume_pct: 80,
+            keys: default_keys(),
+            mouse_presses: true,
             name: String::new(),
         }
     }
@@ -238,6 +280,8 @@ pub struct Game {
     /// A still scene asked for by `?tile=`: the time to hold, once its
     /// chart arrives.
     tile_at_ms: Option<i64>,
+    /// Waiting for the next key, to add it as a press key.
+    listening: bool,
 }
 
 fn action(name: &str, value: impl ToString, label: String) -> Action {
@@ -302,6 +346,7 @@ impl Game {
             message: String::new(),
             pointer: (FIELD_W / 2, FIELD_H / 2),
             tile_at_ms: None,
+            listening: false,
         })
     }
 
@@ -455,6 +500,11 @@ impl Game {
                 }
             }
             "key.escape" => {
+                if self.listening {
+                    self.listening = false;
+                    self.commands.push(Command::Ui);
+                    return Ok(());
+                }
                 if self.paused {
                     return self.act("play.resume", "");
                 }
@@ -509,11 +559,36 @@ impl Game {
                 self.kept.settings.name = clean_name(value);
                 self.commands.push(Command::Ui);
             }
+            "keys.listen" => {
+                if self.kept.settings.keys.len() >= MAX_KEYS {
+                    self.message = self.f("settings.keys.full", &[("n", MAX_KEYS.to_string())]);
+                } else {
+                    self.listening = true;
+                    self.message.clear();
+                }
+                self.commands.push(Command::Ui);
+            }
+            "keys.remove" => {
+                self.kept.settings.keys.retain(|k| k != value);
+                self.message.clear();
+                self.commands.push(Command::Ui);
+            }
+            "keys.reset" => {
+                self.kept.settings.keys = default_keys();
+                self.listening = false;
+                self.message.clear();
+                self.commands.push(Command::Ui);
+            }
+            "mouse.toggle" => {
+                self.kept.settings.mouse_presses = !self.kept.settings.mouse_presses;
+                self.commands.push(Command::Ui);
+            }
             "calibrate.again" => return self.act("screen.show", "calibrate"),
             "save.loaded" => self.restore(value),
             other => return Err(format!("Unknown action \"{other}\".")),
         }
-        if name.ends_with(".less") || name.ends_with(".more") || name == "name.set" {
+        let changes_save = ["name.set", "keys.remove", "keys.reset", "mouse.toggle"];
+        if name.ends_with(".less") || name.ends_with(".more") || changes_save.contains(&name) {
             self.keep();
         }
         Ok(())
@@ -547,6 +622,12 @@ impl Game {
                 (y as i64 * FIELD_H as i64 / h as i64) as i32,
             );
         }
+        // with the mouse set to aim only, its presses are moves
+        let kind = if button == MOUSE && !self.kept.settings.mouse_presses {
+            0
+        } else {
+            kind
+        };
         let heard = Self::heard(ctx_us, perf_us, stamp_us);
         let offset = self.kept.settings.audio_offset_ms * MS;
         if let Some(cal) = self.calibration.as_mut() {
@@ -592,6 +673,40 @@ impl Game {
             2 => session.play.input(Input::Up { t, button }),
             _ => {}
         }
+    }
+
+    /// One key going down (`kind` 1) or up (`kind` 2), by its code. Escape
+    /// pauses or cancels; a press key presses its button; while listening,
+    /// the key becomes a press key. Returns whether the key was the game's,
+    /// so the page can keep the browser from acting on it too.
+    pub fn key(&mut self, kind: u8, code: &str, ctx_us: i64, perf_us: i64, stamp_us: i64) -> bool {
+        if code == ESCAPE {
+            if kind == 1 {
+                let _ = self.act("key.escape", "");
+            }
+            return true;
+        }
+        if self.listening {
+            if kind != 1 {
+                return true;
+            }
+            self.listening = false;
+            let keys = &mut self.kept.settings.keys;
+            if keys.iter().any(|k| k == code) {
+                self.message = self.f("settings.keys.taken", &[("key", key_label(code))]);
+            } else {
+                keys.push(code.to_string());
+                self.message.clear();
+                self.keep();
+            }
+            self.commands.push(Command::Ui);
+            return true;
+        }
+        let Some(k) = self.kept.settings.keys.iter().position(|c| c == code) else {
+            return false;
+        };
+        self.input(kind, (k + 1) as u8, 0, 0, 0, 0, ctx_us, perf_us, stamp_us);
+        true
     }
 
     /// One display frame: runs the play up to now and returns the draw list.
@@ -859,6 +974,45 @@ impl Game {
                     }
                     panels.push(p);
                 }
+                let mut keys = panel("keys");
+                let labels: Vec<String> = st.keys.iter().map(|k| key_label(k)).collect();
+                keys.lines.push(if labels.is_empty() {
+                    self.s("settings.keys.none")
+                } else {
+                    self.f("settings.keys", &[("keys", labels.join(", "))])
+                });
+                if self.listening {
+                    keys.lines.push(self.s("settings.keys.listening"));
+                }
+                let mut add = action("keys.listen", "", self.s("settings.keys.add"));
+                add.enabled = !self.listening;
+                keys.actions.push(add);
+                for (code, label) in st.keys.iter().zip(&labels) {
+                    keys.actions.push(action(
+                        "keys.remove",
+                        code,
+                        self.f("settings.keys.remove", &[("key", label.clone())]),
+                    ));
+                }
+                keys.actions
+                    .push(action("keys.reset", "", self.s("settings.keys.reset")));
+                panels.push(keys);
+                let mut mouse = panel("mouse");
+                mouse.lines.push(self.s(if st.mouse_presses {
+                    "settings.mouse.on"
+                } else {
+                    "settings.mouse.off"
+                }));
+                mouse.actions.push(action(
+                    "mouse.toggle",
+                    "",
+                    self.s(if st.mouse_presses {
+                        "settings.mouse.turn_off"
+                    } else {
+                        "settings.mouse.turn_on"
+                    }),
+                ));
+                panels.push(mouse);
                 let mut name = panel("name");
                 name.field = Some(Field {
                     action: "name.set".into(),
@@ -1414,6 +1568,114 @@ mod tests {
             .as_str()
             .unwrap()
             .contains("\"visual_offset_ms\":-5"));
+    }
+
+    fn keys_of(g: &Game) -> Vec<String> {
+        g.kept.settings.keys.clone()
+    }
+
+    #[test]
+    fn w_a_s_d_can_replace_z_and_x_and_each_presses() {
+        let mut g = game();
+        g.act("screen.show", "settings").unwrap();
+        for code in ["KeyW", "KeyA", "KeyS", "KeyD"] {
+            g.act("keys.listen", "").unwrap();
+            assert!(g.key(1, code, 0, 0, 0));
+        }
+        g.act("keys.remove", "KeyZ").unwrap();
+        g.act("keys.remove", "KeyX").unwrap();
+        assert_eq!(keys_of(&g), ["KeyW", "KeyA", "KeyS", "KeyD"]);
+        assert_eq!(
+            g.ui().panels.iter().find(|p| p.id == "keys").unwrap().lines[0],
+            "Press keys: W, A, S, D"
+        );
+        // into a play: S presses the second target, Z no longer does
+        let saved = g.kept.clone();
+        let mut g = playing();
+        g.kept = saved;
+        g.input(
+            0,
+            MOUSE,
+            600,
+            400,
+            FIELD_W,
+            FIELD_H,
+            10_500_000,
+            100_000_000,
+            101_500_000,
+        );
+        assert!(
+            !g.key(1, "KeyZ", 10_500_000, 100_000_000, 101_500_000),
+            "Z is not the game's now"
+        );
+        assert_eq!(g.session.as_ref().unwrap().play.judged[1], None);
+        assert!(g.key(1, "KeyS", 10_500_000, 100_000_000, 101_500_000));
+        assert_eq!(
+            g.session.as_ref().unwrap().play.judged[1],
+            Some(Judgement::Perfect)
+        );
+    }
+
+    #[test]
+    fn a_key_already_bound_is_refused_and_escape_cancels() {
+        let mut g = game();
+        g.act("keys.listen", "").unwrap();
+        g.key(1, "KeyZ", 0, 0, 0);
+        assert_eq!(keys_of(&g), ["KeyZ", "KeyX"]);
+        assert_eq!(g.ui().message, "Z is a press key already.");
+        g.act("keys.listen", "").unwrap();
+        g.key(1, ESCAPE, 0, 0, 0);
+        assert!(!g.listening);
+        assert_eq!(keys_of(&g), ["KeyZ", "KeyX"]);
+        assert_eq!(g.screen, Screen::Title, "the cancelling Escape went no further");
+    }
+
+    #[test]
+    fn there_are_at_most_eight_press_keys() {
+        let mut g = game();
+        for k in 0..10 {
+            g.act("keys.listen", "").unwrap();
+            g.key(1, &format!("Digit{k}"), 0, 0, 0);
+        }
+        assert_eq!(keys_of(&g).len(), MAX_KEYS);
+        assert_eq!(
+            g.ui().message,
+            "You have 8 press keys. Remove one to add another."
+        );
+    }
+
+    #[test]
+    fn with_the_mouse_set_to_aim_only_a_click_moves_and_does_not_press() {
+        let mut g = playing();
+        g.act("mouse.toggle", "").unwrap();
+        g.input(
+            1,
+            MOUSE,
+            600,
+            400,
+            FIELD_W,
+            FIELD_H,
+            10_500_000,
+            100_000_000,
+            101_500_000,
+        );
+        assert_eq!(g.pointer, (600, 400));
+        assert_eq!(g.session.as_ref().unwrap().play.judged[1], None);
+        g.key(1, "KeyX", 10_500_000, 100_000_000, 101_500_000);
+        assert_eq!(
+            g.session.as_ref().unwrap().play.judged[1],
+            Some(Judgement::Perfect)
+        );
+    }
+
+    #[test]
+    fn key_codes_read_as_the_key() {
+        assert_eq!(key_label("KeyW"), "W");
+        assert_eq!(key_label("Digit4"), "4");
+        assert_eq!(key_label("ArrowLeft"), "Left");
+        assert_eq!(key_label("ShiftLeft"), "Left Shift");
+        assert_eq!(key_label("Numpad5"), "Numpad 5");
+        assert_eq!(key_label("Space"), "Space");
     }
 
     #[test]

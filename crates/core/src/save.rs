@@ -24,12 +24,16 @@ use crate::game::{Best, Settings};
 
 /// The shape this build writes. Bump it, and add a step to `migrate`,
 /// whenever a field is added, renamed, moved or removed.
-pub const VERSION: u32 = 1;
+pub const VERSION: u32 = 2;
 
 /// Fields an old save holds that a migration removed or changed on purpose,
 /// each with the version that did it and why. Every other field comes back
 /// from loading with the value the old save held.
-pub const DROPPED: &[(&str, u32, &str)] = &[];
+pub const DROPPED: &[(&str, u32, &str)] = &[(
+    "settings",
+    2,
+    "gained keys and mouse_presses; every version 1 setting keeps its value (a_version_one_save_keeps_its_settings_and_gets_z_and_x)",
+)];
 
 /// Status keys. Each has a string in `data/` under the same key.
 pub const UNREADABLE: &str = "save.unreadable";
@@ -76,10 +80,18 @@ pub fn store(save: &Save) -> String {
 
 /// One step from a save of version `from` to `from + 1`. Pure: it reads the
 /// old fields and writes the new ones.
-fn migrate(from: u32, v: Map<String, Value>) -> Option<Map<String, Value>> {
-    // no step yet: version 1 is the first deployed
-    let _ = (from, v);
-    None
+fn migrate(from: u32, mut v: Map<String, Value>) -> Option<Map<String, Value>> {
+    match from {
+        // version 2 added the press keys and whether the mouse presses
+        1 => {
+            let settings = v.entry("settings").or_insert_with(|| json!({}));
+            let fields = settings.as_object_mut()?;
+            fields.insert("keys".into(), json!(crate::game::default_keys()));
+            fields.insert("mouse_presses".into(), json!(true));
+            Some(v)
+        }
+        _ => None,
+    }
 }
 
 pub fn load(text: &str) -> Loaded {
@@ -133,6 +145,8 @@ mod tests {
                 visual_offset_ms: -5,
                 volume_pct: 60,
                 name: "Ana".into(),
+                keys: vec!["KeyW".into(), "KeyA".into()],
+                mouse_presses: false,
             },
             bests,
         }
@@ -157,7 +171,7 @@ mod tests {
             (r#"{"bests":{}}"#, UNREADABLE),
             (r#"{"version":99}"#, NEWER),
             (r#"{"version":0}"#, NO_STEP),
-            (r#"{"version":1,"cheat":true}"#, UNREADABLE),
+            (r#"{"version":2,"cheat":true}"#, UNREADABLE),
         ] {
             assert_eq!(
                 load(text),
@@ -168,6 +182,18 @@ mod tests {
                 "{text}"
             );
         }
+    }
+
+    #[test]
+    fn a_version_one_save_keeps_its_settings_and_gets_z_and_x() {
+        let old = r#"{"version":1,"settings":{"audio_offset_ms":10,"visual_offset_ms":-5,"volume_pct":70,"name":"Cy"},"bests":{}}"#;
+        let Loaded::Ready(save) = load(old) else {
+            panic!("refused");
+        };
+        assert_eq!(save.settings.audio_offset_ms, 10);
+        assert_eq!(save.settings.name, "Cy");
+        assert_eq!(save.settings.keys, ["KeyZ", "KeyX"]);
+        assert!(save.settings.mouse_presses);
     }
 
     #[test]

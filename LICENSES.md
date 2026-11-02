@@ -1,6 +1,6 @@
 # Licences
 
-Every file in this repository that is not code written for it: its source, its author, its terms. The code is under the repository's licence.
+Every file in this repository that is not code written for it: its source, its author, its terms. The code is under the repository's licence, MIT (`LICENSE`, chosen by the person on 2026-11-02). The album's songs are not covered by it: their terms are in the row below.
 
 ## Assets
 

@@ -70,6 +70,17 @@ impl Game {
         )
     }
 
+    /// A key by its `KeyboardEvent.code`; true when the game used it.
+    pub fn key(&mut self, kind: u8, code: &str, ctx_s: f64, perf_ms: f64, stamp_ms: f64) -> bool {
+        self.inner.key(
+            kind,
+            code,
+            (ctx_s * 1_000_000.0) as i64,
+            (perf_ms * 1000.0) as i64,
+            (stamp_ms * 1000.0) as i64,
+        )
+    }
+
     pub fn frame(&mut self, ctx_s: f64, perf_ms: f64, now_ms: f64) -> Vec<i32> {
         self.inner.frame(
             (ctx_s * 1_000_000.0) as i64,

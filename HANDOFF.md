@@ -58,7 +58,6 @@ Every `SECOND-ORDER.md` row with status *person*, by number, with what the perso
 - R3.1: the five audio files: downloads turned on for each track, or the files in BrowserOSU/songs/ (BO-Q18).
 - R3.11: whether Easy is busy enough, after playing it.
 - R3.12: the placeholder songs' titles, which go when the real songs arrive.
-- R3.13: a licence for the code, if you want one.
 
 ## Mistakes so far
 

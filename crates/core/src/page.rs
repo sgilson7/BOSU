@@ -67,6 +67,18 @@ pub const REQUIRED: &[&str] = &[
     "save.unreadable",
     "save.newer",
     "save.no_step",
+    "settings.keys",
+    "settings.keys.none",
+    "settings.keys.add",
+    "settings.keys.remove",
+    "settings.keys.reset",
+    "settings.keys.listening",
+    "settings.keys.taken",
+    "settings.keys.full",
+    "settings.mouse.on",
+    "settings.mouse.off",
+    "settings.mouse.turn_off",
+    "settings.mouse.turn_on",
 ];
 
 pub type Strings = BTreeMap<String, String>;
