@@ -69,6 +69,7 @@ Every `SECOND-ORDER.md` row with status *person*, by number, with what the perso
 - R3.1: the five audio files: downloads turned on for each track, or the files in BrowserOSU/songs/ (BO-Q18).
 - R3.11: whether Easy is busy enough, after playing it.
 - R6.1: the names of our five extra songs, if you want others.
+- R7.7: Play Ballad Of Mr Nasty on Easy, Normal and Hard: do they keep the beat you tap?
 - R7.6: Play Ballad Of Mr Nasty, charted from its true chart; if it is right, say so and the other fourteen songs get the same method (`"true_chart": true` in `data/songs.json`).
 - R7.5: Grunge Dome and Space Tsunami: play them; if the beat is off, give their tempo from Ableton in `data/songs.json` (`bpm_milli`). Say whether Vamos's Den feels like 124.6 with triplets or 187 straight.
 - R6.5: older commits in the public repository still hold the friend's SoundCloud handle; history can be rewritten if you want it gone.

@@ -457,8 +457,8 @@
  {
   "name": "each difficulty chooses from the one above",
   "file": "crates/core/src/generate.rs",
-  "find": "        pool = thin(a, &pool, d, above, from_true, gap);",
-  "replace": "        pool = thin(a, &pool, d, above, from_true, gap);\n        if k == difficulty {\n            let mut fresh = heard(a);\n            fresh.retain(|&q| q % 3 != 1);\n            pool = thin(a, &fresh, d, 100, from_true, gap);\n        }",
+  "find": "        pool = thin(a, &pool, d, above, false, d.min_gap_us, &[]);",
+  "replace": "        pool = thin(a, &pool, d, above, false, d.min_gap_us, &[]);\n        if k == difficulty {\n            let mut fresh = heard(a);\n            fresh.retain(|&q| q % 3 != 1);\n            pool = thin(a, &fresh, d, 100, false, d.min_gap_us, &[]);\n        }",
   "test": "each_difficulty_s_targets_are_all_in_the_one_above"
  },
  {
@@ -506,8 +506,8 @@
  {
   "name": "the true chart keeps every hit",
   "file": "crates/core/src/generate.rs",
-  "find": "        if from_true && k == hardest {",
-  "replace": "        if from_true && k == hardest && false {",
+  "find": "    if difficulty == hardest {\n        return hits;\n    }",
+  "replace": "",
   "test": "the_true_chart_has_a_target_on_every_hit"
  },
  {
@@ -515,20 +515,34 @@
   "file": "crates/core/src/generate.rs",
   "find": "        (true, Some(&v)) => v as u64,",
   "replace": "        (true, Some(&_v)) => a.slots[q] as u64,",
-  "test": "from_the_true_chart_the_most_stressed_hits_stay"
+  "test": "from_the_true_chart_the_most_stressed_hits_stay_on_expert"
  },
  {
   "name": "from the true chart, gaps follow the beat",
   "file": "crates/core/src/generate.rs",
-  "find": "            d.min_gap_us.min(a.beat_us / TRUE_GAP_DIVISORS[k])",
-  "replace": "            d.min_gap_us",
+  "find": "let gap = |k: usize| DIFFICULTIES[k].min_gap_us.min(a.beat_us / TRUE_GAP_DIVISORS[k]);",
+  "replace": "let gap = |k: usize| DIFFICULTIES[k].min_gap_us;",
   "test": "from_the_true_chart_triplets_at_120_stay_on_hard"
  },
  {
-  "name": "from the true chart, each thins the one above",
+  "name": "from the true chart, Expert keeps all of Hard",
   "file": "crates/core/src/generate.rs",
-  "find": "        pool = thin(a, &pool, d, above, from_true, gap);",
-  "replace": "        pool = thin(a, &heard_above(a, TRUE_FLOOR_PCT), d, 100, from_true, gap);",
+  "find": "    let mut chosen: Vec<usize> = must.to_vec();",
+  "replace": "    let mut chosen: Vec<usize> = Vec::new();",
   "test": "from_the_true_chart_each_difficulty_is_within_the_one_above"
+ },
+ {
+  "name": "from the true chart, Easy to Hard follow the groove",
+  "file": "crates/core/src/generate.rs",
+  "find": "        Some(level) => level.clone(),",
+  "replace": "        Some(_) => thin(a, &hits, &DIFFICULTIES[difficulty], 100, true, gap(difficulty), &[]),",
+  "test": "from_the_true_chart_easy_keeps_every_beat"
+ },
+ {
+  "name": "the groove is the bars around",
+  "file": "crates/core/src/generate.rs",
+  "find": "        let (lo, hi) = (b.saturating_sub(GROOVE_BACK), (b + GROOVE_AHEAD + 1).min(bars));",
+  "replace": "        let (lo, hi) = (b, b + 1);",
+  "test": "from_the_true_chart_normal_follows_the_groove_not_one_stray_hit"
  }
 ]
