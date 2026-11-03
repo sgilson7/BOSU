@@ -127,7 +127,10 @@ pub fn tick_times(target: &Target, beat_us: i64, good_us: i64) -> Vec<i64> {
 
 impl Play {
     pub fn new(chart: Chart) -> Play {
-        let d = DIFFICULTIES[chart.difficulty.min(DIFFICULTIES.len() - 1)];
+        let mut d = DIFFICULTIES[chart.difficulty.min(DIFFICULTIES.len() - 1)];
+        if chart.radius > 0 {
+            d.radius = chart.radius;
+        }
         let n = chart.targets.len();
         Play {
             chart,
@@ -736,5 +739,18 @@ mod tests {
             judged,
             vec![Perfect, Great, Good, Good, Perfect, Miss, Perfect, Miss]
         );
+    }
+
+    #[test]
+    fn a_chart_with_its_own_circle_size_is_judged_by_it() {
+        // Easy's radius is 76; this chart's circles are 90: 90 to the right
+        // counts, 91 does not (R7.3)
+        let mut c = one(EASY);
+        c.radius = 90;
+        assert_eq!(
+            press_at(&c, 2_000_000, 890, 450).judged[0],
+            Some(Judgement::Perfect)
+        );
+        assert_eq!(press_at(&c, 2_000_000, 891, 450).judged[0], None);
     }
 }

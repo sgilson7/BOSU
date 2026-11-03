@@ -1,18 +1,26 @@
 //! Laying out a chart from a song's analysis (PLAN.md decision 10).
 //!
-//! Which slots become targets: the strongest share (`keep_pct`) of the
-//! difficulty's grid, strongest first, never closer than its minimum gap.
+//! Which grid lines become targets: only lines with an onset on them
+//! (R7.2), and of those the strongest share (`keep_pct`) of each phrase on
+//! the difficulty's grid, beats counting for more than half beats and half
+//! beats for more than the rest, never closer than the minimum gap. Each
+//! difficulty chooses from the targets of the one above it, so Easy's
+//! targets are all in Normal, Normal's in Hard, and so on (R7.2).
+//! Circle size: a song busier than the usual gets bigger targets at every
+//! difficulty, a sparser one smaller (R7.3).
 //! Where each goes: as far from the last as the time between them allows
 //! (`spacing` units a 100 ms, at most `max_jump`), turned by a seeded
 //! angle, kept inside the playfield and off every target still on screen.
 //! Combo numbers start again every eight beats. Some long gaps become holds.
 //! The same analysis, difficulty and seed give the same chart (BO-6).
 
-use crate::beats::{Analysis, SLOTS_PER_BEAT};
+use crate::beats::Analysis;
 use crate::chart::{Chart, Hold, Target};
 use crate::fx;
 use crate::rng::Rng;
-use crate::tuning::{Difficulty, DIFFICULTIES, X_MAX, X_MIN, Y_MAX, Y_MIN};
+use crate::tuning::{
+    Difficulty, DIFFICULTIES, HEARD_PER_MINUTE, SIZE_MAX_PCT, SIZE_MIN_PCT, X_MAX, X_MIN, Y_MAX, Y_MIN,
+};
 
 /// Beats a phrase: the combo number starts again at each phrase.
 pub const PHRASE_BEATS: i64 = 8;
@@ -28,6 +36,10 @@ const FLOOR_PCT: u64 = 8;
 const STRONG_PCT: usize = 95;
 /// Tries at placing one target before taking the least-bad spot.
 const TRIES: u32 = 96;
+/// The spacing of the whole-field search when every try is crowded.
+const FALLBACK_STEP: usize = 20;
+/// No target in the first second.
+const LEAD_IN_US: i64 = 1_000_000;
 /// The gap before the next target that may hold, in beats.
 const HOLD_MIN_BEATS: i64 = 2;
 
@@ -41,43 +53,97 @@ fn dist2(a: (i32, i32), b: (i32, i32)) -> i64 {
     dx * dx + dy * dy
 }
 
-/// The slots that become targets, in time order.
-pub fn choose_slots(a: &Analysis, d: &Difficulty) -> Vec<usize> {
-    let step = (SLOTS_PER_BEAT / d.grid) as usize;
-    let mut sorted = a.slots.clone();
+/// Whether grid line `q` of a song with `division` lines a beat is on a
+/// difficulty's grid of `grid` steps a beat. In triplets the half beat is
+/// the third line, the swung one; with six lines both half beats count.
+pub fn on_grid(q: usize, division: i64, grid: i64) -> bool {
+    let p = q as i64 % division;
+    match (grid, division) {
+        (g, _) if g >= 4 => true,
+        (g, 4) if g >= 2 => p % 2 == 0,
+        (g, 3) if g >= 2 => p != 1,
+        (g, 6) if g >= 2 => p % 3 == 0 || p == 4,
+        (g, 2) if g >= 2 => true,
+        (g, 1) if g >= 2 => true,
+        _ => p == 0,
+    }
+}
+
+/// Percent weights by a line's place in the beat: on the beat, on the half
+/// beat, elsewhere.
+const WEIGHT_BEAT: u64 = 125;
+const WEIGHT_HALF: u64 = 100;
+const WEIGHT_REST: u64 = 80;
+
+fn weight(q: usize, division: i64) -> u64 {
+    if on_grid(q, division, 1) {
+        WEIGHT_BEAT
+    } else if on_grid(q, division, 2) {
+        WEIGHT_HALF
+    } else {
+        WEIGHT_REST
+    }
+}
+
+/// The grid lines with an onset strong enough to be a target, in time
+/// order.
+pub fn heard(a: &Analysis) -> Vec<usize> {
+    let mut sorted: Vec<u32> = a.slots.iter().copied().filter(|&v| v > 0).collect();
     sorted.sort_unstable();
     let strong = sorted.get(sorted.len() * STRONG_PCT / 100).copied().unwrap_or(0) as u64;
     let floor = strong * FLOOR_PCT / 100;
     let last_t = a.length_us - LEAD_OUT_US;
-    let candidates: Vec<usize> = (0..a.slots.len())
-        .step_by(step)
-        .filter(|&q| a.slots[q] as u64 > floor && a.slot_time(q) <= last_t && a.slot_time(q) >= 1_000_000)
+    (0..a.slots.len())
+        .filter(|&q| a.slots[q] as u64 > floor && a.slot_time(q) <= last_t && a.slot_time(q) >= LEAD_IN_US)
+        .collect()
+}
+
+/// The grid lines that become targets at a difficulty, in time order.
+pub fn choose_slots(a: &Analysis, difficulty: usize) -> Vec<usize> {
+    let mut pool = heard(a);
+    let mut above = 100;
+    for k in (difficulty..DIFFICULTIES.len()).rev() {
+        pool = thin(a, &pool, &DIFFICULTIES[k], above);
+        above = DIFFICULTIES[k].keep_pct;
+    }
+    pool
+}
+
+/// The targets one difficulty keeps from `pool`, the targets of the
+/// difficulty above it (or every heard line, for the hardest), whose share
+/// was `above` percent: each phrase keeps `keep_pct / above` of its pool,
+/// so the shares multiply out to `keep_pct` of what is heard.
+fn thin(a: &Analysis, pool: &[usize], d: &Difficulty, above: i64) -> Vec<usize> {
+    let score = |q: usize| a.slots[q] as u64 * weight(q, a.division);
+    let by_score = |p: &usize, q: &usize| score(*q).cmp(&score(*p)).then(p.cmp(q));
+    let phrase_lines = (PHRASE_BEATS * a.division) as usize;
+    let on: Vec<usize> = pool
+        .iter()
+        .copied()
+        .filter(|&q| on_grid(q, a.division, d.grid))
         .collect();
     // The strongest share within each phrase, so a quiet verse gets targets
-    // in proportion and a loud chorus does not take them all (R6.7); then
-    // strongest first, earlier first among equals, for the gap below.
-    let phrase_slots = (PHRASE_BEATS * SLOTS_PER_BEAT) as usize;
+    // in proportion and a loud chorus does not take them all (R6.7).
     let mut kept: Vec<usize> = Vec::new();
     let mut start = 0;
-    while start < candidates.len() {
-        let phrase = candidates[start] / phrase_slots;
+    while start < on.len() {
+        let phrase = on[start] / phrase_lines;
         let end = start
-            + candidates[start..]
+            + on[start..]
                 .iter()
-                .take_while(|&&q| q / phrase_slots == phrase)
+                .take_while(|&&q| q / phrase_lines == phrase)
                 .count();
-        let mut group = candidates[start..end].to_vec();
-        group.sort_by(|&p, &q| a.slots[q].cmp(&a.slots[p]).then(p.cmp(&q)));
-        let keep = ((group.len() as i64 * d.keep_pct + 99) / 100) as usize;
+        let mut group = on[start..end].to_vec();
+        group.sort_by(by_score);
+        let keep = ((group.len() as i64 * d.keep_pct + above - 1) / above) as usize;
         kept.extend(group.into_iter().take(keep));
         start = end;
     }
-    kept.sort_by(|&p, &q| a.slots[q].cmp(&a.slots[p]).then(p.cmp(&q)));
+    kept.sort_by(by_score);
     let mut chosen: Vec<usize> = Vec::new();
     for &q in kept.iter() {
         let t = a.slot_time(q);
-        let clear = chosen.iter().all(|&c| (a.slot_time(c) - t).abs() >= d.min_gap_us);
-        if clear {
+        if chosen.iter().all(|&c| (a.slot_time(c) - t).abs() >= d.min_gap_us) {
             chosen.push(q);
         }
     }
@@ -85,18 +151,45 @@ pub fn choose_slots(a: &Analysis, d: &Difficulty) -> Vec<usize> {
     chosen
 }
 
+/// A song's circle size in percent of each difficulty's radius: the square
+/// root of how busy it is (`heard` lines a minute) against
+/// `HEARD_PER_MINUTE`, within `SIZE_MIN_PCT` and `SIZE_MAX_PCT` (R7.3).
+pub fn size_pct(heard: usize, span_us: i64) -> i64 {
+    let per_minute_milli = heard as i64 * 60_000_000_000 / span_us.max(1);
+    isqrt(per_minute_milli * 10 / HEARD_PER_MINUTE).clamp(SIZE_MIN_PCT, SIZE_MAX_PCT)
+}
+
+fn isqrt(v: i64) -> i64 {
+    if v <= 0 {
+        return 0;
+    }
+    let mut x = v;
+    let mut y = (x + 1) / 2;
+    while y < x {
+        x = y;
+        y = (x + v / x) / 2;
+    }
+    x
+}
+
 /// Generates one chart.
 pub fn chart(song: &str, a: &Analysis, difficulty: usize, seed: u64) -> Chart {
     let d = DIFFICULTIES[difficulty];
-    let slots = choose_slots(a, &d);
+    let slots = choose_slots(a, difficulty);
     let times: Vec<i64> = slots.iter().map(|&q| a.slot_time(q)).collect();
+    let lines = heard(a);
+    let span = match (lines.first(), lines.last()) {
+        (Some(&f), Some(&l)) => a.slot_time(l) - a.slot_time(f),
+        _ => 0,
+    };
+    let radius = (d.radius as i64 * size_pct(lines.len(), span) / 100) as i32;
     let mut rng = Rng::new(seed ^ ((difficulty as u64 + 1) << 32));
     let mut targets: Vec<Target> = Vec::new();
     let mut at = ((X_MIN + X_MAX) / 2, (Y_MIN + Y_MAX) / 2);
     let mut heading: i32 = rng.between(0, fx::TURN - 1);
     let mut combo = 0u32;
     let mut phrase = -1i64;
-    let min_sep = 2 * d.radius as i64 + 8;
+    let min_sep = 2 * radius as i64 + 8;
     let mut k = 0;
     while k < times.len() {
         let t = times[k];
@@ -147,6 +240,27 @@ pub fn chart(song: &str, a: &Analysis, difficulty: usize, seed: u64) -> Chart {
                 break;
             }
         }
+        // crowded: search the whole field for a clear spot, nearest the
+        // wanted distance, before taking the least-bad one
+        if best.map(|b| b.2 < min_sep * min_sep).unwrap_or(true) {
+            let mut clear: Option<((i32, i32), i64)> = None;
+            for x in (X_MIN..=X_MAX).step_by(FALLBACK_STEP) {
+                for y in (Y_MIN..=Y_MAX).step_by(FALLBACK_STEP) {
+                    let room = visible
+                        .iter()
+                        .map(|&v| dist2(v, (x, y)))
+                        .min()
+                        .unwrap_or(i64::MAX);
+                    let off = (dist2(from, (x, y)) - want * want).abs();
+                    if room >= min_sep * min_sep && clear.map(|c| off < c.1).unwrap_or(true) {
+                        clear = Some(((x, y), off));
+                    }
+                }
+            }
+            if let Some((spot, _)) = clear {
+                best = Some((spot, heading, min_sep * min_sep));
+            }
+        }
         let (spot, angle, _) = best.unwrap_or((((X_MIN + X_MAX) / 2, (Y_MIN + Y_MAX) / 2), heading, 0));
         heading = angle;
         at = spot;
@@ -164,7 +278,7 @@ pub fn chart(song: &str, a: &Analysis, difficulty: usize, seed: u64) -> Chart {
             let end = next_t - a.beat_us.max(d.min_gap_us);
             if end - t >= a.beat_us {
                 let len_ms = (end - t) / 1000;
-                let reach = (d.spacing * len_ms / 200).clamp(d.radius as i64 * 2, d.max_jump);
+                let reach = (d.spacing * len_ms / 200).clamp(radius as i64 * 2, d.max_jump);
                 let bend = rng.between(-fx::TURN / 8, fx::TURN / 8);
                 let mut path = vec![[spot.0, spot.1]];
                 let mut p = spot;
@@ -201,6 +315,7 @@ pub fn chart(song: &str, a: &Analysis, difficulty: usize, seed: u64) -> Chart {
         beat_us: a.beat_us,
         first_beat_us: a.first_beat_us,
         length_us: a.length_us,
+        radius,
         targets,
     }
 }
@@ -284,7 +399,7 @@ pub mod tests {
         for (bpm, seed) in [(110, 5), (140, 6), (174, 7)] {
             for c in all(&busy_song(bpm, 40, seed)) {
                 let d = DIFFICULTIES[c.difficulty];
-                let sep = (2 * d.radius) as i64;
+                let sep = (2 * c.radius) as i64;
                 for (k, t) in c.targets.iter().enumerate() {
                     for p in &c.targets[..k] {
                         if p.end() + d.good_us >= t.t - d.approach_us {
@@ -356,11 +471,11 @@ pub mod tests {
     #[test]
     fn one_huge_hit_does_not_empty_the_chart() {
         let mut a = busy_song(128, 40, 14);
-        let plain = choose_slots(&a, &DIFFICULTIES[0]).len();
+        let plain = choose_slots(&a, 0).len();
         // one slot forty times as loud as anything else
         let top = *a.slots.iter().max().unwrap();
         a.slots[40] = top * 40;
-        let with_hit = choose_slots(&a, &DIFFICULTIES[0]).len();
+        let with_hit = choose_slots(&a, 0).len();
         assert!(with_hit * 10 >= plain * 9, "{plain} targets fell to {with_hit}");
     }
 
@@ -408,5 +523,78 @@ pub mod tests {
             assert_eq!(p.max_combo, p.full_combo());
         }
         assert!(holds > 0, "no holds at all");
+    }
+
+    #[test]
+    fn each_difficulty_s_targets_are_all_in_the_one_above() {
+        // Easy's in Normal's, Normal's in Hard's, and so on (R7.2)
+        for (bpm, seed) in [(100, 31), (128, 32), (170, 33)] {
+            let charts = all(&busy_song(bpm, 40, seed));
+            for pair in charts.windows(2) {
+                let above: Vec<i64> = pair[1].targets.iter().map(|t| t.t).collect();
+                for t in &pair[0].targets {
+                    assert!(
+                        above.contains(&t.t),
+                        "{bpm} bpm: {} has a target at {} that {} lacks",
+                        DIFFICULTIES[pair[0].difficulty].key,
+                        t.t,
+                        DIFFICULTIES[pair[1].difficulty].key
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn every_target_sits_on_an_onset() {
+        // a line with no onset on it is never a target, even where a whole
+        // stretch has none (R7.2)
+        let mut a = busy_song(128, 40, 34);
+        let half = a.slots.len() / 2;
+        for v in a.slots[half..].iter_mut() {
+            *v = 0;
+        }
+        for c in all(&a) {
+            for t in &c.targets {
+                let q = ((t.t - a.first_beat_us) * a.division / a.beat_us) as usize;
+                assert_eq!(a.slot_time(q), t.t);
+                assert!(
+                    a.slots[q] > 0,
+                    "{} target at {} us",
+                    DIFFICULTIES[c.difficulty].key,
+                    t.t
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn a_busier_song_gets_bigger_circles_within_bounds() {
+        // sized for 348 onsets a minute (R7.3)
+        let minute = 60_000_000;
+        assert_eq!(size_pct(348, minute), 100);
+        // a quarter as busy: half by the square root, held at 80%
+        assert_eq!(size_pct(87, minute), 80);
+        // four times as busy: twice, held at 120%
+        assert_eq!(size_pct(1392, minute), 120);
+        // 500 is 1.4368 times as busy; its square root is 1.1987: 119%
+        assert_eq!(size_pct(500, minute), 119);
+        // 250 is 0.7184; its square root is 0.8476: 84%
+        assert_eq!(size_pct(250, minute), 84);
+    }
+
+    #[test]
+    fn each_difficulty_s_circles_are_smaller_than_the_one_below_on_a_song() {
+        for (bpm, seed) in [(100, 35), (128, 36), (170, 37)] {
+            let charts = all(&busy_song(bpm, 40, seed));
+            for pair in charts.windows(2) {
+                assert!(
+                    pair[1].radius < pair[0].radius,
+                    "{bpm} bpm: {} then {}",
+                    pair[0].radius,
+                    pair[1].radius
+                );
+            }
+        }
     }
 }

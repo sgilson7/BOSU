@@ -41,8 +41,20 @@ pub struct Chart {
     pub first_beat_us: i64,
     /// The song's length; play ends here.
     pub length_us: i64,
+    /// The circles' radius in units; 0 (an older chart) is the
+    /// difficulty's own (R7.3).
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub radius: i32,
     pub targets: Vec<Target>,
 }
+
+fn is_zero(r: &i32) -> bool {
+    *r == 0
+}
+
+/// The smallest and largest radius a chart may give its circles.
+pub const RADIUS_MIN: i32 = 20;
+pub const RADIUS_MAX: i32 = 99;
 
 /// Why a chart cannot be played. `message` is shown to the reader as it is.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -50,6 +62,7 @@ pub enum ChartError {
     NotJson(String),
     NoDifficulty(usize),
     NoBeat,
+    BadRadius(i32),
     Empty,
     OutOfOrder(usize),
     Outside(usize),
@@ -65,6 +78,9 @@ impl ChartError {
             ChartError::NotJson(d) => format!("The chart could not be read: {d}"),
             ChartError::NoDifficulty(d) => format!("The chart names difficulty {d}, which does not exist."),
             ChartError::NoBeat => "The chart's beat length is not above zero.".into(),
+            ChartError::BadRadius(r) => {
+                format!("The chart's circle radius {r} is outside {RADIUS_MIN} to {RADIUS_MAX}.")
+            }
             ChartError::Empty => "The chart has no targets.".into(),
             ChartError::OutOfOrder(k) => format!("Target {k} is not later than the one before it."),
             ChartError::Outside(k) => format!("Target {k} lies outside the playfield."),
@@ -96,6 +112,9 @@ impl Chart {
         }
         if self.beat_us <= 0 {
             return Err(ChartError::NoBeat);
+        }
+        if self.radius != 0 && !(RADIUS_MIN..=RADIUS_MAX).contains(&self.radius) {
+            return Err(ChartError::BadRadius(self.radius));
         }
         if self.targets.is_empty() {
             return Err(ChartError::Empty);
@@ -185,6 +204,7 @@ pub mod tests {
             beat_us: 500_000,
             first_beat_us: 0,
             length_us,
+            radius: 0,
             targets,
         }
     }
@@ -264,5 +284,18 @@ pub mod tests {
         assert_eq!(t.point_at(2_500_000), (600, 500));
         assert_eq!(t.point_at(3_000_000), (600, 600));
         assert_eq!(t.point_at(9_000_000), (600, 600));
+    }
+
+    #[test]
+    fn a_chart_with_a_circle_size_out_of_range_is_refused() {
+        let mut c = chart(0, vec![tap(1000, 800, 450, 1)]);
+        c.radius = 19;
+        assert_eq!(c.check(), Err(ChartError::BadRadius(19)));
+        c.radius = 100;
+        assert_eq!(c.check(), Err(ChartError::BadRadius(100)));
+        c.radius = 20;
+        assert_eq!(c.check(), Ok(()));
+        c.radius = 0;
+        assert_eq!(c.check(), Ok(()));
     }
 }

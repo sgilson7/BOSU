@@ -28,6 +28,15 @@ pub const END_POINTS: i64 = 30;
 /// The combo multiplier: points times (100 + combo, at most this) / 100.
 pub const COMBO_CAP: i64 = 100;
 
+/// A song's circles are sized by how busy it is: a song with this many
+/// onsets a minute gets each difficulty's `radius`, a busier one bigger
+/// circles and a sparser one smaller, by the square root, at most this
+/// much smaller and larger (percent). One size a song keeps every
+/// difficulty's circles smaller than the one below (R7.3).
+pub const HEARD_PER_MINUTE: i64 = 348;
+pub const SIZE_MIN_PCT: i64 = 80;
+pub const SIZE_MAX_PCT: i64 = 120;
+
 /// How many players a lobby holds (BO-Q5).
 pub const LOBBY_SEATS: usize = 8;
 
@@ -157,8 +166,9 @@ mod tests {
             );
             // two targets a minimum gap apart are never both inside one Good window
             assert!(2 * d.good_us < d.min_gap_us + d.good_us, "{}", d.key);
-            assert!(X_MIN - d.radius > 0 && X_MAX + d.radius < FIELD_W, "{}", d.key);
-            assert!(Y_MIN - d.radius > 0 && Y_MAX + d.radius < FIELD_H, "{}", d.key);
+            let r = (d.radius as i64 * SIZE_MAX_PCT / 100) as i32;
+            assert!(X_MIN - r > 0 && X_MAX + r < FIELD_W, "{}", d.key);
+            assert!(Y_MIN - r > 0 && Y_MAX + r < FIELD_H, "{}", d.key);
         }
     }
 }

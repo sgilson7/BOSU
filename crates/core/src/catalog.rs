@@ -120,12 +120,17 @@ pub fn charts_for(song: &Song, a: &Analysis) -> Vec<(String, String)> {
 /// can edit one and a diff shows which moved.
 pub fn pretty(c: &Chart) -> String {
     let mut out = format!(
-        "{{\"song\": {}, \"difficulty\": {}, \"beat_us\": {}, \"first_beat_us\": {}, \"length_us\": {},\n \"targets\": [\n",
+        "{{\"song\": {}, \"difficulty\": {}, \"beat_us\": {}, \"first_beat_us\": {}, \"length_us\": {},{}\n \"targets\": [\n",
         serde_json::to_string(&c.song).unwrap_or_default(),
         c.difficulty,
         c.beat_us,
         c.first_beat_us,
-        c.length_us
+        c.length_us,
+        if c.radius > 0 {
+            format!(" \"radius\": {},", c.radius)
+        } else {
+            String::new()
+        }
     );
     let lines: Vec<String> = c
         .targets

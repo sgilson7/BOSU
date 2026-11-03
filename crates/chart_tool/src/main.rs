@@ -142,6 +142,20 @@ fn main() {
                 }
             );
         }
+        "peaks" => {
+            // each song's onset peaks, time and strength a line, for checking
+            // the beat finder against another onset detector (R7.1)
+            fs::create_dir_all("target/peaks").unwrap_or_else(|e| fail(&e.to_string()));
+            for s in &songs.songs {
+                let samples = decode(&format!("web/{}", s.audio));
+                let lines: Vec<String> = beats::peaks(&beats::envelope(&samples))
+                    .iter()
+                    .map(|(t, v)| format!("{t} {v}"))
+                    .collect();
+                fs::write(format!("target/peaks/{}.txt", s.id), lines.join("\n") + "\n")
+                    .unwrap_or_else(|e| fail(&e.to_string()));
+            }
+        }
         "stability" => {
             // each song's grid from its first and second halves alone, set
             // against the whole song's: a song whose halves disagree has no
@@ -171,6 +185,6 @@ fn main() {
                 }
             }
         }
-        _ => fail("usage: chart analyse | charts | check | stability"),
+        _ => fail("usage: chart analyse | charts | check | peaks | stability"),
     }
 }

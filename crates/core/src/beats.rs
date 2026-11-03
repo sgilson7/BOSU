@@ -3,11 +3,15 @@
 //! The song comes in as 16-bit mono samples at `RATE` (the chart tool
 //! decodes it; the core only reads numbers). Three bands are split with
 //! one-pole filters; each band's energy per hop is put on a log scale; an
-//! onset is a rise in that energy. The tempo comes from the onset
-//! envelope's autocorrelation between 70 and 190 beats a minute, and is then
-//! refined with the phase, to the microsecond, by fitting one fixed grid to
-//! the whole song: songs made in Ableton keep one tempo, and a fitted grid
-//! puts every target on the song's own beat rather than on the nearest hop
+//! onset is a rise in that energy, and a peak in the rises is a hit a
+//! player hears. The envelope's autocorrelation between 70 and 190 beats a
+//! minute gives candidate tempos; each, and the tempos a half, a third and a
+//! quarter away, is fitted to the microsecond as one fixed grid, straight
+//! (four lines a beat) and in triplets (three), by how many peaks lie on its
+//! lines beyond chance. Grids that fit about as well are told apart by
+//! which line of the beat the peaks favour: 120 straight and 160 in
+//! triplets share every line, and only the beat says which it is (R7.1).
+//! Songs made in Ableton keep one tempo, so one grid serves the whole song
 //! (R3.4, a change from the plan's dynamic programming).
 
 use serde::{Deserialize, Serialize};
@@ -18,13 +22,15 @@ pub const RATE: i64 = 22_050;
 pub const HOP: i64 = 128;
 pub const MIN_BPM: i64 = 70;
 pub const MAX_BPM: i64 = 190;
-/// A tempo below this is doubled when the double still fits.
-pub const COMFORT_BPM: i64 = 90;
 /// A whole-number tempo is taken when its grid scores at least this share
 /// (percent) of the best fit's.
 pub const WHOLE_BPM_PCT: i64 = 97;
-/// Grid slots a beat: strengths are kept on quarter beats.
-pub const SLOTS_PER_BEAT: i64 = 4;
+/// Grid lines a beat in a straight song.
+pub const STRAIGHT: i64 = 4;
+
+fn straight() -> i64 {
+    STRAIGHT
+}
 
 pub const US: i64 = 1_000_000;
 
@@ -35,7 +41,13 @@ pub struct Analysis {
     /// The first beat at or after 0.
     pub first_beat_us: i64,
     pub length_us: i64,
-    /// Onset strength at each quarter beat from `first_beat_us`.
+    /// Grid lines a beat: 4 for a straight song with quarter beats, 2 for
+    /// one with half beats only, 3 for one in triplets, 6 for one with both
+    /// straight half beats and triplets (R7.1).
+    #[serde(default = "straight")]
+    pub division: i64,
+    /// The strongest onset on each grid line from `first_beat_us`, or 0
+    /// where no onset is (R7.2).
     pub slots: Vec<u32>,
     /// Where the first sound is in this decode. A browser that trims the
     /// start of an MP3 differently finds it elsewhere, and the game moves
@@ -73,7 +85,7 @@ impl Analysis {
     }
 
     pub fn slot_time(&self, slot: usize) -> i64 {
-        self.first_beat_us + slot as i64 * self.beat_us / SLOTS_PER_BEAT
+        self.first_beat_us + slot as i64 * self.beat_us / self.division
     }
 }
 
@@ -135,41 +147,214 @@ fn hop_us() -> i64 {
     HOP * US / RATE
 }
 
-/// The envelope near time `t`: the larger of the two hops around it.
-fn env_at(onsets: &[i64], t: i64) -> i64 {
-    let i = (t * RATE / (HOP * US)) as usize;
-    let a = onsets.get(i).copied().unwrap_or(0);
-    let b = onsets.get(i + 1).copied().unwrap_or(0);
-    a.max(b)
+/// The middle of hop `k`, in microseconds, without the rounding of
+/// `hop_us` adding up over a song: an onset found in a hop lies somewhere
+/// in it.
+fn hop_time(k: usize) -> i64 {
+    (2 * k as i64 + 1) * HOP * US / (2 * RATE)
 }
 
-fn grid_score(onsets: &[i64], period: i64, phase: i64, length: i64) -> i64 {
-    let mut s = 0;
-    let mut t = phase;
-    while t < length {
-        s += env_at(onsets, t);
-        t += period;
+/// Hops either side that a peak must top.
+const PEAK_NEAR: usize = 3;
+/// Hops either side over which a peak's surroundings are averaged: about
+/// 0.37 s.
+const PEAK_LOCAL: usize = 64;
+/// A peak stands at least this share (percent) above its surroundings.
+const PEAK_OVER_PCT: i64 = 200;
+/// A peak lies on a grid line when it is this close to it: about two hops.
+pub const ON_LINE_US: i64 = 12_000;
+/// The weakest share (percent) of the peaks is left out of the tempo
+/// search, so the grid follows the hits a player hears.
+const FIT_SKIP_PCT: usize = 40;
+/// Each peak counts by its strength, up to this percentile's, so a loud
+/// hit counts for more than a faint one and one huge hit no more than a
+/// strong one.
+const FIT_CAP_PCT: usize = 95;
+/// Peaks weaker than this share (1 in N) of the capped strength are left
+/// out of the tempo search.
+const FIT_FLOOR_SHARE: i64 = 8;
+/// Phase is searched in steps of this many microseconds of a unit.
+const PHASE_STEP_US: i64 = 700;
+/// The grids tried on a beat: straight half beats, straight quarters,
+/// triplets, and half beats and triplets at once.
+const DIVISIONS: [i64; 4] = [2, 4, 3, 6];
+/// Tempos are favoured by how near they are to this many beats a minute...
+const PRIOR_BPM: i64 = 120;
+/// ...falling to about 60% half an octave away (in 256ths of an octave).
+const PRIOR_WIDTH: i64 = 128;
+
+/// The onsets a player hears: hops whose envelope tops its neighbours and
+/// stands well above its surroundings. Each is (time in microseconds,
+/// strength).
+pub fn peaks(onsets: &[i64]) -> Vec<(i64, i64)> {
+    let n = onsets.len();
+    let mut prefix = vec![0i64; n + 1];
+    for k in 0..n {
+        prefix[k + 1] = prefix[k] + onsets[k];
     }
-    s
+    (0..n)
+        .filter_map(|k| {
+            let v = onsets[k];
+            let (a, b) = (k.saturating_sub(PEAK_NEAR), (k + PEAK_NEAR + 1).min(n));
+            // the first of equal tops
+            let top =
+                v > 0 && onsets[a..k].iter().all(|&w| w < v) && onsets[k + 1..b].iter().all(|&w| w <= v);
+            let (la, lb) = (k.saturating_sub(PEAK_LOCAL), (k + PEAK_LOCAL + 1).min(n));
+            let mean = (prefix[lb] - prefix[la]) / (lb - la) as i64;
+            (top && v * 100 > mean * PEAK_OVER_PCT).then(|| (hop_time(k), v))
+        })
+        .collect()
 }
 
-/// The best (period, phase) with period in `periods` stepping by `p_step`
-/// and phase stepping by `f_step` across one period.
-fn fit(onsets: &[i64], periods: (i64, i64), p_step: i64, f_step: i64, length: i64) -> (i64, i64) {
-    let mut best = (0, periods.0, 0);
-    let mut p = periods.0;
-    while p <= periods.1 {
-        let mut f = 0;
-        while f < p {
-            let s = grid_score(onsets, p, f, length);
-            if s > best.0 {
-                best = (s, p, f);
-            }
-            f += f_step;
+/// How one grid fits: lines every `period / division` from `phase`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Fit {
+    period: i64,
+    division: i64,
+    /// The first line at or after 0, on a beat.
+    phase: i64,
+    /// The strength of the peaks on a line.
+    hits: i64,
+    /// Strength on a line beyond what lines this close would catch by chance,
+    /// per mille of what is left after chance.
+    fit: i64,
+}
+
+/// The best phase for a grid of `division` lines a `period`, and how well
+/// it fits `times`. Positions are taken as `t * division mod period`, so a
+/// period not divisible by the division loses nothing.
+fn fit_grid(times: &[(i64, i64)], period: i64, division: i64) -> Fit {
+    let span = period; // one unit, scaled by `division`
+    let bins = (span / (PHASE_STEP_US * division)).max(1);
+    let mut hist = vec![0i64; bins as usize];
+    for &(t, w) in times {
+        let x = (t * division).rem_euclid(span);
+        hist[(x * bins / span) as usize] += w;
+    }
+    let half = (ON_LINE_US * division * bins / span).min((bins - 1) / 2) as usize;
+    let nb = bins as usize;
+    let mut sum: i64 = (0..=2 * half).map(|j| hist[(nb + j - half) % nb]).sum();
+    let mut best = (sum, 0usize);
+    for b in 1..nb {
+        sum += hist[(b + half) % nb] - hist[(nb + b - half - 1) % nb];
+        if sum > best.0 {
+            best = (sum, b);
         }
-        p += p_step;
     }
-    (best.1, best.2)
+    // every centre on a plateau of the window catches the same peaks; take
+    // the mean of the peaks it catches, not the plateau's first centre
+    let centre = best.1 as i64 * span / bins + span / (2 * bins);
+    let reach = ON_LINE_US * division;
+    let (mut moved, mut caught) = (0i64, 0i64);
+    for &(t, w) in times {
+        let d = ((t * division).rem_euclid(span) - centre + span / 2).rem_euclid(span) - span / 2;
+        if d.abs() <= reach {
+            moved += d * w;
+            caught += w;
+        }
+    }
+    let unit_phase = (centre + moved / caught.max(1)).rem_euclid(span) / division;
+    let n = times.iter().map(|p| p.1).sum::<i64>().max(1);
+    let chance = 2 * ON_LINE_US * division * 1000 / period;
+    let fit = (best.0 * 1000 - n * chance) * 1000 / (n * (1000 - chance).max(1));
+    // which of the `division` lines in a beat is hit most: the beat
+    let mut counts = vec![0i64; division as usize];
+    for &(t, w) in times {
+        let line = ((t - unit_phase) * division + period / 2).div_euclid(period);
+        let at = unit_phase + line * period / division;
+        if (t - at).abs() <= ON_LINE_US {
+            counts[line.rem_euclid(division) as usize] += w;
+        }
+    }
+    let r = counts
+        .iter()
+        .enumerate()
+        .max_by_key(|&(r, c)| (*c, -(r as i64)))
+        .map(|p| p.0)
+        .unwrap_or(0);
+    Fit {
+        period,
+        division,
+        phase: (unit_phase + r as i64 * period / division).rem_euclid(period),
+        hits: counts.iter().sum(),
+        fit,
+    }
+}
+
+/// The best fit with a period within `reach` of `around`, in steps small
+/// enough that the grid moves less than a line's width over the song.
+fn refine(times: &[(i64, i64)], around: i64, reach: i64, division: i64, length: i64) -> Fit {
+    let step = (ON_LINE_US * around / (2 * length.max(1))).max(1);
+    let mut best = fit_grid(times, around, division);
+    let mut p = around - reach;
+    while p <= around + reach {
+        let f = fit_grid(times, p, division);
+        if f.hits > best.hits {
+            best = f;
+        }
+        p += step;
+    }
+    best
+}
+
+/// How much a beat of `period` is favoured, per mille: 1000 at
+/// `PRIOR_BPM`, falling away by octaves like a bell curve. Listeners and
+/// beat trackers alike hear a beat near 120 a minute, so of 80, 120 and 160,
+/// which share most of their lines, 120 is taken unless the song's hits
+/// say otherwise (R7.1).
+fn tempo_prior(period: i64) -> i64 {
+    let l = log2_256(60 * US * 1000 / period) - log2_256(PRIOR_BPM * 1000);
+    let s = PRIOR_WIDTH * PRIOR_WIDTH;
+    // 1 / (1 + z^2/2 + z^4/8) for z = l / width, close to exp(-z^2/2)
+    1000 * 8 * s * s / (8 * s * s + 4 * l * l * s + l * l * l * l)
+}
+
+/// The beat, of each candidate's grids, by how clearly its own lines are
+/// hit, weighted by `tempo_prior`; then `settle` on its best-fitting
+/// period (R7.1).
+fn choose(times: &[(i64, i64)], beats: &[Vec<Fit>]) -> Option<Fit> {
+    let score = |fits: &Vec<Fit>| {
+        fits.iter()
+            .map(|f| fit_grid(times, f.period, 1).fit.max(0) * tempo_prior(f.period))
+            .max()
+            .unwrap_or(0)
+    };
+    let fits = beats.iter().max_by_key(|fits| score(fits))?;
+    let period = fits.iter().max_by_key(|f| f.fit)?.period;
+    Some(settle(times, period))
+}
+
+/// The grid on a beat of `period`: the beat's line where its strongest
+/// hits fall, then the division that fits best with that line held, so a
+/// finer grid cannot slide off the beat to catch hits between its lines
+/// (R7.1). Of equal fits, the coarser.
+fn settle(times: &[(i64, i64)], period: i64) -> Fit {
+    let beat = fit_grid(times, period, 1);
+    DIVISIONS
+        .iter()
+        .map(|&d| fit_at(times, period, d, beat.phase))
+        .max_by_key(|f| (f.fit, -f.division))
+        .unwrap_or(beat)
+}
+
+/// How well a grid with its lines fixed at `phase` fits `times`.
+fn fit_at(times: &[(i64, i64)], period: i64, division: i64, phase: i64) -> Fit {
+    let mut hits = 0;
+    for &(t, w) in times {
+        let line = ((t - phase) * division + period / 2).div_euclid(period);
+        if (t - phase - line * period / division).abs() <= ON_LINE_US {
+            hits += w;
+        }
+    }
+    let n = times.iter().map(|p| p.1).sum::<i64>().max(1);
+    let chance = 2 * ON_LINE_US * division * 1000 / period;
+    Fit {
+        period,
+        division,
+        phase,
+        hits,
+        fit: (hits * 1000 - n * chance) * 1000 / (n * (1000 - chance).max(1)),
+    }
 }
 
 /// Finds the tempo, the phase and the quarter-beat strengths of a song.
@@ -179,86 +364,117 @@ pub fn analyse(samples: &[i16]) -> Option<Analysis> {
 }
 
 /// As `analyse`, with the tempo given in thousandths of a beat a minute
-/// (from the song's project, in `data/songs.json`): only the first beat is
-/// found (R6.4).
+/// (from the song's project, in `data/songs.json`): only the first beat
+/// and whether the song is straight or in triplets are found (R6.4).
 pub fn analyse_with(samples: &[i16], bpm_milli: Option<i64>) -> Option<Analysis> {
     let onsets = envelope(samples);
     let length = samples.len() as i64 * US / RATE;
     let hop = hop_us();
-    // coarse tempo: autocorrelation over lags in hops
     let min_lag = (60 * US / MAX_BPM) / hop;
     let max_lag = (60 * US / MIN_BPM) / hop + 1;
     if (onsets.len() as i64) < max_lag * 4 {
         return None;
     }
-    let mut best = (0i64, 0i64);
-    for lag in min_lag..=max_lag {
-        let l = lag as usize;
-        let s: i64 = (0..onsets.len() - l).map(|n| onsets[n] * onsets[n + l]).sum();
-        if s > best.0 {
-            best = (s, lag);
-        }
-    }
-    if best.0 == 0 {
+    let found = peaks(&onsets);
+    let mut by_strength: Vec<i64> = found.iter().map(|p| p.1).collect();
+    by_strength.sort_unstable();
+    let cut = by_strength
+        .get(by_strength.len() * FIT_SKIP_PCT / 100)
+        .copied()
+        .unwrap_or(0);
+    let cap = by_strength
+        .get(by_strength.len() * FIT_CAP_PCT / 100)
+        .copied()
+        .unwrap_or(0);
+    let times: Vec<(i64, i64)> = found
+        .iter()
+        .filter(|p| p.1 >= cut.max(cap / FIT_FLOOR_SHARE))
+        .map(|p| (p.0, p.1.min(cap)))
+        .collect();
+    if times.len() < 8 {
         return None;
     }
     let first = first_sound_us(samples, RATE).unwrap_or(0);
-    if let Some(bpm) = bpm_milli.filter(|b| *b > 0) {
+    let min_period = 60 * US / MAX_BPM;
+    let max_period = 60 * US / MIN_BPM;
+    let beats: Vec<Vec<Fit>> = if let Some(bpm) = bpm_milli.filter(|b| *b > 0) {
         let period = 60 * US * 1000 / bpm;
-        let (_, phase) = fit(&onsets, (period, period), 1, hop / 8, length);
-        return Some(Analysis {
-            first_sound_us: first,
-            ..slots_for(&onsets, period, phase, length)
-        });
-    }
-    let mut lag_us = best.1 * hop;
-    if 60 * US / lag_us < COMFORT_BPM && 60 * US / (lag_us / 2) <= MAX_BPM {
-        lag_us /= 2;
-    }
-    // refine the period and phase together, coarse then fine
-    let (p, _) = fit(
-        &onsets,
-        (lag_us - 2 * hop, lag_us + 2 * hop),
-        200,
-        hop / 2,
-        length,
-    );
-    let (fitted, fitted_phase) = fit(&onsets, (p - 400, p + 400), 10, hop / 8, length);
-    // songs made in Ableton almost always sit on a whole number of beats a
-    // minute; a fit a hair off one drifts tens of ms by the end (R6.4). Take
-    // the whole number when its grid scores nearly as well.
-    let best = grid_score(&onsets, fitted, fitted_phase, length);
-    let whole_bpm = (60 * US * 1000 / fitted + 500) / 1000;
-    let whole_period = 60 * US / whole_bpm.max(1);
-    let (_, whole_phase) = fit(&onsets, (whole_period, whole_period), 1, hop / 8, length);
-    let whole_score = grid_score(&onsets, whole_period, whole_phase, length);
-    let (beat_us, phase) = if whole_score * 100 >= best * WHOLE_BPM_PCT {
-        (whole_period, whole_phase)
+        vec![DIVISIONS.iter().map(|&d| fit_grid(&times, period, d)).collect()]
     } else {
-        (fitted, fitted_phase)
+        // candidate beats: the envelope's strongest repeats and the tempos
+        // a half, a third or a quarter away from them
+        let mut lags: Vec<(i64, i64)> = (min_lag..=max_lag)
+            .map(|lag| {
+                let l = lag as usize;
+                let s: i64 = (0..onsets.len() - l).map(|n| onsets[n] * onsets[n + l]).sum();
+                (s, lag)
+            })
+            .collect();
+        let peaks_at: Vec<i64> = (1..lags.len() - 1)
+            .filter(|&k| lags[k].0 >= lags[k - 1].0 && lags[k].0 > lags[k + 1].0)
+            .map(|k| lags[k].1)
+            .collect();
+        lags.retain(|l| peaks_at.contains(&l.1));
+        lags.sort_by_key(|l| (-l.0, l.1));
+        if lags.first().map(|l| l.0).unwrap_or(0) <= 0 {
+            return None;
+        }
+        let mut periods: Vec<i64> = Vec::new();
+        for &(_, lag) in lags.iter().take(4) {
+            let base = lag * HOP * US / RATE;
+            for (num, den) in [(1, 1), (2, 1), (1, 2), (2, 3), (3, 2), (3, 4), (4, 3)] {
+                let p = base * num / den;
+                if (min_period..=max_period).contains(&p) && periods.iter().all(|&q| (q - p).abs() > hop) {
+                    periods.push(p);
+                }
+            }
+        }
+        periods
+            .iter()
+            .map(|&p| {
+                DIVISIONS
+                    .iter()
+                    .map(|&d| refine(&times, p, 2 * hop, d, length))
+                    .collect()
+            })
+            .collect()
     };
+    let mut best = choose(&times, &beats)?;
+    if bpm_milli.is_none() {
+        // songs made in Ableton almost always sit on a whole number of beats
+        // a minute; a fit a hair off one drifts tens of ms by the end (R6.4)
+        let whole_bpm = (60 * US * 1000 / best.period + 500) / 1000;
+        let whole_period = 60 * US / whole_bpm.max(1);
+        let beat = fit_grid(&times, whole_period, 1);
+        let whole = fit_at(&times, whole_period, best.division, beat.phase);
+        if whole.hits * 100 >= best.hits * WHOLE_BPM_PCT {
+            best = whole;
+        }
+    }
     Some(Analysis {
         first_sound_us: first,
-        ..slots_for(&onsets, beat_us, phase, length)
+        ..slots_for(&found, best.period, best.division, best.phase, length)
     })
 }
 
-fn slots_for(onsets: &[i64], beat_us: i64, phase: i64, length: i64) -> Analysis {
-    let hop = hop_us();
-    let first_beat_us = phase % beat_us;
-    let count = ((length - first_beat_us) * SLOTS_PER_BEAT / beat_us).max(0) as usize;
-    let slots = (0..count)
-        .map(|q| {
-            let t = first_beat_us + q as i64 * beat_us / SLOTS_PER_BEAT;
-            env_at(onsets, t)
-                .max(env_at(onsets, t - hop))
-                .min(u32::MAX as i64) as u32
-        })
-        .collect();
+/// Each grid line's strength: the strongest peak on it, or 0.
+fn slots_for(found: &[(i64, i64)], beat_us: i64, division: i64, phase: i64, length: i64) -> Analysis {
+    let first_beat_us = phase.rem_euclid(beat_us);
+    let count = ((length - first_beat_us) * division / beat_us).max(0) as usize;
+    let mut slots = vec![0u32; count];
+    for &(t, s) in found {
+        let line = ((t - first_beat_us) * division + beat_us / 2).div_euclid(beat_us);
+        let at = first_beat_us + line * beat_us / division;
+        if line >= 0 && (line as usize) < count && (t - at).abs() <= ON_LINE_US {
+            let v = &mut slots[line as usize];
+            *v = (*v).max(s.min(u32::MAX as i64) as u32);
+        }
+    }
     Analysis {
         beat_us,
         first_beat_us,
         length_us: length,
+        division,
         slots,
         first_sound_us: 0,
     }
@@ -363,26 +579,28 @@ pub mod tests {
     #[test]
     fn strong_slots_are_the_clicks_and_weak_ones_between() {
         let a = analyse(&song(20, &clicks_at(120, 0, 20), 5)).expect("a beat");
-        // slot 0, 4, 8 are beats; 2, 6 are half beats with nothing on them
-        for beat in 1..20usize {
+        // every beat's line is strong; the half beat between has nothing
+        let d = a.division as usize;
+        assert_eq!(d % 2, 0, "a straight song has half beats");
+        for beat in 1..19usize {
             assert!(
-                a.slots[beat * 4] > 4 * a.slots[beat * 4 + 2].max(1),
+                a.slots[beat * d] > 4 * a.slots[beat * d + d / 2].max(1),
                 "beat {beat}: {:?}",
-                &a.slots[beat * 4..beat * 4 + 4]
+                &a.slots[beat * d..beat * d + d]
             );
         }
     }
 
     #[test]
     fn a_held_note_is_an_onset_where_it_starts_only() {
-        // a square tone held 300 ms from each beat at 120 bpm: 125 ms in it
-        // is still loud, and 250 ms in it is louder than the silence after
-        // it, but neither is a rise
+        // a square tone held 245 ms from each beat at 120 bpm: 125 ms in it
+        // is still loud, and its last moments, at the half beat, are louder
+        // than the silence after them, but neither is a rise
         let n = (20 * RATE) as usize;
         let mut s = vec![0i16; n];
         let beat = (RATE / 2) as usize;
         for b in 0..40 {
-            for k in 0..(RATE as usize * 3 / 10) {
+            for k in 0..(RATE as usize * 245 / 1000) {
                 if let Some(v) = s.get_mut(b * beat + k) {
                     *v = if (k / 50) % 2 == 0 { 9000 } else { -9000 };
                 }
@@ -390,12 +608,18 @@ pub mod tests {
         }
         let a = analyse(&s).expect("a beat");
         assert!((a.bpm_milli() - 120_000).abs() <= 1000);
+        let d = a.division as usize;
         for beat in 2..30usize {
-            let later = a.slots[beat * 4 + 1].max(a.slots[beat * 4 + 2]).max(1);
+            let later = a.slots[beat * d + 1..beat * d + d]
+                .iter()
+                .copied()
+                .max()
+                .unwrap_or(0)
+                .max(1);
             assert!(
-                a.slots[beat * 4] > 4 * later,
+                a.slots[beat * d] > 4 * later,
                 "beat {beat}: {:?}",
-                &a.slots[beat * 4..beat * 4 + 4]
+                &a.slots[beat * d..beat * d + d]
             );
         }
     }
@@ -438,6 +662,20 @@ pub mod tests {
     #[test]
     fn silence_has_no_beat() {
         assert_eq!(analyse(&vec![0i16; (10 * RATE) as usize]), None);
+        // five clicks are too few hits to say where a beat is
+        let few: Vec<(i64, i32)> = clicks_at(120, 0, 10).into_iter().take(5).collect();
+        let mut quiet = vec![0i16; (10 * RATE) as usize];
+        for (t, amp) in few {
+            let start = (t * RATE / US) as usize;
+            for k in 0..1200usize {
+                quiet[start + k] = if (k / 6) % 2 == 0 {
+                    (amp >> (k / 200)) as i16
+                } else {
+                    -((amp >> (k / 200)) as i16)
+                };
+            }
+        }
+        assert_eq!(analyse(&quiet), None);
         assert_eq!(analyse(&[0i16; 100]), None);
     }
 
@@ -452,5 +690,94 @@ pub mod tests {
             assert!(l >= last);
             last = l;
         }
+    }
+
+    #[test]
+    fn a_dotted_rhythm_at_120_is_found_as_120_not_160() {
+        // a kick on every beat and hits every three sixteenths, the pattern
+        // that read Monke Walkin' as 160 (R7.1)
+        let sixteenth = 125_000;
+        let mut c: Vec<(i64, i32)> = Vec::new();
+        for k in 0..(40 * 8) {
+            let t = 200_000 + k * sixteenth;
+            if k % 4 == 0 || (k % 16) % 3 == 0 {
+                c.push((t, 15_000));
+            }
+        }
+        let a = analyse(&song(40, &c, 21)).expect("a beat");
+        assert!((a.bpm_milli() - 120_000).abs() <= 1000, "found {}", a.bpm_milli());
+        assert_eq!(a.division, 4);
+    }
+
+    #[test]
+    fn a_song_in_triplets_gets_lines_on_its_triplets() {
+        // 100 a minute, a strong beat and two much softer hits a third of a
+        // beat apart: every hit on a line, read in threes (R7.1). With the
+        // beat no louder than the rest, three even hits a beat read as well
+        // in twos at 150, and the song's own tempo is the way to say which.
+        let beat = 600_000;
+        let mut c: Vec<(i64, i32)> = Vec::new();
+        let mut t = 300_000;
+        while t < 30 * US {
+            c.push((t, 20_000));
+            c.push((t + beat / 3, 2_500));
+            c.push((t + 2 * beat / 3, 2_500));
+            t += beat;
+        }
+        let a = analyse(&song(30, &c, 22)).expect("a beat");
+        assert!((a.bpm_milli() - 100_000).abs() <= 1000, "found {}", a.bpm_milli());
+        assert_eq!(a.division % 3, 0, "division {}", a.division);
+        let per_third = (a.division / 3) as usize;
+        for b in 1..40usize {
+            for third in 0..3 {
+                let q = b * a.division as usize + third * per_third;
+                assert!(
+                    a.slots[q] > 0,
+                    "beat {b}, third {third}: {:?}",
+                    &a.slots[q - 1..q + 2]
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn a_line_with_no_onset_on_it_has_no_strength() {
+        // clicks on the beat, and softer ones 140 ms after, between the
+        // grid's lines, over silence: every line but the beat's is exactly 0,
+        // the late click on none (R7.2)
+        let mut s = vec![0i16; (20 * RATE) as usize];
+        let mut c = clicks_at(120, 0, 20);
+        let late: Vec<(i64, i32)> = c.iter().map(|&(t, _)| (t + 140_000, 4000)).collect();
+        c.extend(late);
+        for (t, amp) in c {
+            let start = (t * RATE / US) as usize;
+            for k in 0..1200usize {
+                if let Some(v) = s.get_mut(start + k) {
+                    *v = if (k / 6) % 2 == 0 {
+                        (amp >> (k / 200)) as i16
+                    } else {
+                        -((amp >> (k / 200)) as i16)
+                    };
+                }
+            }
+        }
+        let a = analyse(&s).expect("a beat");
+        let d = a.division as usize;
+        for (q, &v) in a.slots.iter().enumerate().take(19 * d) {
+            if q % d != 0 {
+                assert_eq!(v, 0, "line {q}");
+            }
+        }
+    }
+
+    #[test]
+    fn the_tempo_prior_favours_120_and_falls_away_by_octaves() {
+        // at 120 a minute: 1000. At 160: log2_256 gives 4408 and 4308, 100
+        // apart; with s = 128 * 128 = 16384,
+        // 8000 s^2 / (8 s^2 + 4 * 100^2 * s + 100^4) = 739
+        assert_eq!(tempo_prior(500_000), 1000);
+        assert_eq!(tempo_prior(375_000), 739);
+        assert!(tempo_prior(750_000) < tempo_prior(500_000));
+        assert!(tempo_prior(250_000) < tempo_prior(375_000));
     }
 }

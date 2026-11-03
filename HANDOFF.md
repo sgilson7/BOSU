@@ -39,6 +39,7 @@ Countless Days: an original browser rhythm game, press each target as its ring c
 - `tools/placeholders/make.sh`: remakes our five songs (needs ffmpeg).
 - `python3 tools/songs/strip_tags.py SRC.mp3 web/audio/ID.mp3`: a new song without its tags; then add it to `data/songs.json` and run the chart tool.
 - `./target/release/chart stability`: each song's tempo from its halves (R6.4).
+- `./target/release/chart peaks`: each song's onset peaks, time and strength a line, under `target/peaks/`, for checking the beat finder against another onset detector (R7.1).
 - `python3 tools/art/art.py`: redraws the landing picture and icon (needs TeX).
 - `.venv/bin/python tests/browser/decode.py`: every song decodes in each engine, and the shift the core applies there.
 - `.venv/bin/python tests/browser/probe_frames.py chromium firefox webkit`: frame times (BO-11).
@@ -68,7 +69,7 @@ Every `SECOND-ORDER.md` row with status *person*, by number, with what the perso
 - R3.1: the five audio files: downloads turned on for each track, or the files in BrowserOSU/songs/ (BO-Q18).
 - R3.11: whether Easy is busy enough, after playing it.
 - R6.1: the names of our five extra songs, if you want others.
-- R6.4: Grunge Dome and Space Tsunami: play them; if the beat is off, give their tempo from Ableton in `data/songs.json` (`bpm_milli`).
+- R7.5: Grunge Dome and Space Tsunami: play them; if the beat is off, give their tempo from Ableton in `data/songs.json` (`bpm_milli`). Say whether Vamos's Den feels like 124.6 with triplets or 187 straight.
 - R6.5: older commits in the public repository still hold the friend's SoundCloud handle; history can be rewritten if you want it gone.
 - R4.4: a lobby with a friend on another network, by hand.
 
@@ -79,6 +80,8 @@ By system, from `SECOND-ORDER.md`, with the rule each one produced.
 ## What passed
 
 The last lines of `./scripts/check.sh` and `./scripts/count-tests.sh`, with the date and commit.
+
+2026-11-03, round 7 (T11, R7.1 to R7.5), uncommitted on top of de0b244: `./scripts/check.sh` ended `BROWSER CHECK PASSED in chromium, firefox, webkit, webkit-iphone, webkit-ipad` and `BUILDER CHECK PASSED`; `./scripts/count-tests.sh`: 167 passed, 0 failed, 0 ignored; `python3 scripts/break_tests.py`: 71 of 71 breaks caught; `chart_tool check`: 76 files match the generator.
 
 ## The next action
 

@@ -1,429 +1,499 @@
 [
-  {
-    "name": "an empty title is refused",
-    "file": "crates/core/src/page.rs",
-    "find": "            Some(s) if s.trim().is_empty() => return Err(StringsError::Empty(key.to_string())),",
-    "replace": "            Some(_) if false => {}",
-    "test": "an_empty_title_is_rejected_by_name"
-  },
-  {
-    "name": "an unknown action is refused",
-    "file": "crates/core/src/game.rs",
-    "find": "other => return Err(format!(\"Unknown action \\\"{other}\\\".\")),",
-    "replace": "_ => {}",
-    "test": "unknown_actions_and_screens_are_refused_by_name"
-  },
-  {
-    "name": "the perfect window is inclusive",
-    "file": "crates/core/src/play.rs",
-    "find": "let j = if off.abs() <= d.perfect_us {",
-    "replace": "let j = if off.abs() < d.perfect_us {",
-    "test": "easy_window_edges_on_both_sides"
-  },
-  {
-    "name": "the great window decides great",
-    "file": "crates/core/src/play.rs",
-    "find": "} else if off.abs() <= d.great_us {",
-    "replace": "} else if off.abs() < d.perfect_us {",
-    "test": "master_window_edges_on_both_sides"
-  },
-  {
-    "name": "a press outside the good window is no hit",
-    "file": "crates/core/src/play.rs",
-    "find": "&& (t - target.t).abs() <= d.good_us",
-    "replace": "&& (t - target.t).abs() <= d.good_us + 1",
-    "test": "easy_window_edges_on_both_sides"
-  },
-  {
-    "name": "a press must land inside the circle",
-    "file": "crates/core/src/play.rs",
-    "find": "&& within(self.cursor, (target.x, target.y), d.radius)",
-    "replace": "&& within(self.cursor, (target.x, target.y), d.radius + 1)",
-    "test": "a_press_must_land_inside_the_circle"
-  },
-  {
-    "name": "overlapping targets take the earlier",
-    "file": "crates/core/src/play.rs",
-    "find": "            .find(|&k| {",
-    "replace": "            .filter(|&k| {",
-    "test": "two_overlapping_targets_take_the_earlier_first"
-  },
-  {
-    "name": "a held button presses once",
-    "file": "crates/core/src/play.rs",
-    "find": "        if self.held & bit != 0 {\n            return;\n        }",
-    "replace": "",
-    "test": "holding_a_key_down_presses_once"
-  },
-  {
-    "name": "a miss resets the combo",
-    "file": "crates/core/src/play.rs",
-    "find": "        if j == Judgement::Miss {\n            self.combo = 0;",
-    "replace": "        if j == Judgement::Miss {",
-    "test": "hand_worked_score_for_ten_targets_with_one_miss"
-  },
-  {
-    "name": "the multiplier is capped",
-    "file": "crates/core/src/play.rs",
-    "find": "(self.combo as i64).min(COMBO_CAP)",
-    "replace": "(self.combo as i64)",
-    "test": "the_multiplier_stops_growing_at_a_combo_of_100"
-  },
-  {
-    "name": "a tick off the path breaks the combo",
-    "file": "crates/core/src/play.rs",
-    "find": "                        } else {\n                            self.combo = 0;\n                        }",
-    "replace": "                        } else {\n                        }",
-    "test": "leaving_the_path_breaks_the_combo"
-  },
-  {
-    "name": "letting go early breaks the hold",
-    "file": "crates/core/src/play.rs",
-    "find": "let in_window = t >= end - self.d.good_us;",
-    "replace": "let in_window = true;",
-    "test": "letting_go_early_misses_the_end"
-  },
-  {
-    "name": "hold ticks score",
-    "file": "crates/core/src/play.rs",
-    "find": "self.score += TICK_POINTS;",
-    "replace": "",
-    "test": "a_hold_followed_to_the_end_scores_every_tick"
-  },
-  {
-    "name": "inputs use their own times",
-    "file": "crates/core/src/play.rs",
-    "find": "let t = input.at().max(self.now);",
-    "replace": "let t = self.now.max(0);",
-    "test": "the_same_presses_judge_the_same_at_30_60_and_144_frames"
-  },
-  {
-    "name": "a target outside the field is refused",
-    "file": "crates/core/src/chart.rs",
-    "find": "(X_MIN..=X_MAX).contains(&x) && (Y_MIN..=Y_MAX).contains(&y)",
-    "replace": "(X_MIN..=X_MAX).contains(&x)",
-    "test": "a_chart_with_a_target_outside_the_playfield_is_refused"
-  },
-  {
-    "name": "a hold path starts on its target",
-    "file": "crates/core/src/chart.rs",
-    "find": "if h.end <= t.t || h.path.len() < 2 || !starts_here {",
-    "replace": "if h.end <= t.t || h.path.len() < 2 {",
-    "test": "a_hold_whose_path_does_not_start_on_its_target_is_refused"
-  },
-  {
-    "name": "a hold point moves along the path",
-    "file": "crates/core/src/chart.rs",
-    "find": "let i = (along / span).min(last - 1) as usize;",
-    "replace": "let i = 0usize;",
-    "test": "a_hold_point_moves_evenly_along_its_path"
-  },
-  {
-    "name": "tempo is refined to the microsecond",
-    "file": "crates/core/src/beats.rs",
-    "find": "let (beat_us, phase) = fit(&onsets, (p - 400, p + 400), 10, hop / 8, length);",
-    "replace": "let (beat_us, phase) = (lag_us, 0);",
-    "test": "a_click_track_at_174_is_found_within_a_beat_a_minute_and_a_hop"
-  },
-  {
-    "name": "slow tempos are doubled",
-    "file": "crates/core/src/beats.rs",
-    "find": "if 60 * US / lag_us < COMFORT_BPM",
-    "replace": "if false && 60 * US / lag_us < COMFORT_BPM",
-    "test": "a_slow_song_is_doubled_into_the_comfortable_range"
-  },
-  {
-    "name": "onsets are rises, not levels",
-    "file": "crates/core/src/beats.rs",
-    "find": "(logs[n][b] - logs[n - 1][b]).max(0)",
-    "replace": "logs[n][b]",
-    "test": "a_held_note_is_an_onset_where_it_starts_only"
-  },
-  {
-    "name": "silence has no beat",
-    "file": "crates/core/src/beats.rs",
-    "find": "    if best.0 == 0 {\n        return None;\n    }",
-    "replace": "",
-    "test": "silence_has_no_beat"
-  },
-  {
-    "name": "the minimum gap holds",
-    "file": "crates/core/src/generate.rs",
-    "find": "let clear = chosen.iter().all(|&c| (a.slot_time(c) - t).abs() >= d.min_gap_us);",
-    "replace": "let clear = true;",
-    "test": "targets_sit_on_the_grid_and_never_closer_than_the_gap"
-  },
-  {
-    "name": "placement avoids visible targets",
-    "file": "crates/core/src/generate.rs",
-    "find": "            if room >= min_sep * min_sep {\n                break;\n            }",
-    "replace": "            break;",
-    "test": "no_two_visible_targets_overlap"
-  },
-  {
-    "name": "placement stays inside",
-    "file": "crates/core/src/generate.rs",
-    "find": "            if !inside(x, y) {\n                continue;\n            }",
-    "replace": "",
-    "test": "targets_stay_inside_the_playfield"
-  },
-  {
-    "name": "combo restarts each phrase",
-    "file": "crates/core/src/generate.rs",
-    "find": "            phrase = this_phrase;\n            combo = 0;",
-    "replace": "            phrase = this_phrase;",
-    "test": "combo_numbers_start_again_each_phrase"
-  },
-  {
-    "name": "generation is seeded",
-    "file": "crates/core/src/generate.rs",
-    "find": "let mut rng = Rng::new(seed ^ ((difficulty as u64 + 1) << 32));",
-    "replace": "let mut rng = Rng::new((difficulty as u64 + 1) << 32);",
-    "test": "generation_is_the_same_every_time"
-  },
-  {
-    "name": "harder difficulties keep more",
-    "file": "crates/core/src/generate.rs",
-    "find": "let keep = (candidates.len() as i64 * d.keep_pct / 100) as usize;",
-    "replace": "let keep = (candidates.len() as i64 * 50 / 100) as usize;",
-    "test": "each_difficulty_is_harder_than_the_one_below"
-  },
-  {
-    "name": "song time takes the audio offset",
-    "file": "crates/core/src/game.rs",
-    "find": "        let t = heard - start - offset;\n        session.play.input",
-    "replace": "        let t = heard - start;\n        session.play.input",
-    "test": "song_time_is_the_heard_time_less_the_start_and_the_offset"
-  },
-  {
-    "name": "the heard time follows the output timestamp",
-    "file": "crates/core/src/game.rs",
-    "find": "        ctx_us + (stamp_us - perf_us)",
-    "replace": "        ctx_us",
-    "test": "song_time_is_the_heard_time_less_the_start_and_the_offset"
-  },
-  {
-    "name": "calibration takes the median",
-    "file": "crates/core/src/game.rs",
-    "find": "let ms = median(&cal.offsets) / MS;",
-    "replace": "let ms = cal.offsets[0] / MS;",
-    "test": "calibration_of_taps_20_ms_late_sets_an_offset_of_20_ms"
-  },
-  {
-    "name": "settings stop at their limits",
-    "file": "crates/core/src/game.rs",
-    "find": "*value = next.clamp(range.0, range.1);",
-    "replace": "*value = next;",
-    "test": "settings_step_and_stop_at_their_limits"
-  },
-  {
-    "name": "a name is cut to sixteen",
-    "file": "crates/core/src/game.rs",
-    "find": "kept.trim().chars().take(NAME_MAX)",
-    "replace": "kept.trim().chars().take(99)",
-    "test": "a_name_is_trimmed_cleaned_and_cut_to_sixteen"
-  },
-  {
-    "name": "a play waits for its audio",
-    "file": "crates/core/src/game.rs",
-    "find": "if url != self.chart_url() || self.audio_ready.as_deref() != Some(self.audio_url().as_str()) {",
-    "replace": "if url != self.chart_url() {",
-    "test": "song_time_is_the_heard_time_less_the_start_and_the_offset"
-  },
-  {
-    "name": "pause freezes input",
-    "file": "crates/core/src/game.rs",
-    "find": "        if self.paused {\n            return;\n        }\n        let pointer",
-    "replace": "        let pointer",
-    "test": "pausing_suspends_the_audio_and_freezes_input"
-  },
-  {
-    "name": "a refused save is kept",
-    "file": "crates/core/src/game.rs",
-    "find": "                self.commands.push(Command::KeepRefused { text: kept });",
-    "replace": "                let _ = kept;",
-    "test": "a_save_from_any_build_restores_within_the_limits"
-  },
-  {
-    "name": "a missing string is refused",
-    "file": "crates/core/src/page.rs",
-    "find": "            None => return Err(StringsError::Missing(key)),",
-    "replace": "            None => {}",
-    "test": "a_missing_key_is_rejected_by_name"
-  },
-  {
-    "name": "numbers are grouped",
-    "file": "crates/core/src/page.rs",
-    "find": "        if k > 0 && (digits.len() - k).is_multiple_of(3) {",
-    "replace": "        if false {",
-    "test": "numbers_are_formatted_by_hand_worked_cases"
-  },
-  {
-    "name": "a bound key presses",
-    "file": "crates/core/src/game.rs",
-    "find": "        self.input(kind, (k + 1) as u8, 0, 0, 0, 0, ctx_us, perf_us, stamp_us);\n        true",
-    "replace": "        let _ = k;\n        true",
-    "test": "w_a_s_d_can_replace_z_and_x_and_each_presses"
-  },
-  {
-    "name": "a bound key is not bound twice",
-    "file": "crates/core/src/game.rs",
-    "find": "            if keys.iter().any(|k| k == code) {",
-    "replace": "            if false {",
-    "test": "a_key_already_bound_is_refused_and_escape_cancels"
-  },
-  {
-    "name": "press keys are capped",
-    "file": "crates/core/src/game.rs",
-    "find": "                if self.kept.settings.keys.len() >= MAX_KEYS {",
-    "replace": "                if false {",
-    "test": "there_are_at_most_eight_press_keys"
-  },
-  {
-    "name": "the mouse may only aim",
-    "file": "crates/core/src/game.rs",
-    "find": "        let kind = if button == MOUSE && !self.kept.settings.mouse_presses {",
-    "replace": "        let kind = if false {",
-    "test": "with_the_mouse_set_to_aim_only_a_click_moves_and_does_not_press"
-  },
-  {
-    "name": "a version one save is migrated",
-    "file": "crates/core/src/save.rs",
-    "find": "        1 => {\n            let settings",
-    "replace": "        9 => {\n            let settings",
-    "test": "a_version_one_save_keeps_its_settings_and_gets_z_and_x"
-  },
-  {
-    "name": "another build is let in",
-    "file": "crates/core/src/online.rs",
-    "find": "if protocol != PROTOCOL || build != self.build {",
-    "replace": "if protocol != PROTOCOL {",
-    "test": "another_build_or_protocol_is_turned_away_with_a_reason"
-  },
-  {
-    "name": "the lobby holds eight",
-    "file": "crates/core/src/online.rs",
-    "find": "if self.role == Role::Host && self.admitted().len() + 1 >= LOBBY_SEATS {",
-    "replace": "if false {",
-    "test": "a_ninth_is_told_the_lobby_is_full"
-  },
-  {
-    "name": "the host stamps who scored",
-    "file": "crates/core/src/online.rs",
-    "find": "                    s.player = self.peers[&peer]",
-    "replace": "                    s.player = s.player.clone() + &self.peers[&peer]",
-    "test": "a_joiner_cannot_post_a_score_as_someone_else"
-  },
-  {
-    "name": "start waits for every ready",
-    "file": "crates/core/src/online.rs",
-    "find": "self.role == Role::Host && self.peers.values().filter(|s| s.hello.is_some()).all(|s| s.ready)",
-    "replace": "self.role == Role::Host",
-    "test": "the_host_waits_for_every_ready"
-  },
-  {
-    "name": "a stranger's message is garbage",
-    "file": "crates/core/src/online.rs",
-    "find": "            _ if !said_hello => self.status = GARBLED,",
-    "replace": "",
-    "test": "a_peer_that_has_not_said_hello_changes_nothing"
-  },
-  {
-    "name": "signatures are checked",
-    "file": "crates/core/src/ledger.rs",
-    "find": "    if !verify_signature(r) {",
-    "replace": "    if false && !verify_signature(r) {",
-    "test": "a_record_with_a_bad_signature_is_refused"
-  },
-  {
-    "name": "replays are checked",
-    "file": "crates/core/src/ledger.rs",
-    "find": "    let same = p.score == b.score",
-    "replace": "    let same = true || p.score == b.score",
-    "test": "a_record_whose_score_does_not_match_its_replay_is_refused"
-  },
-  {
-    "name": "a replay must match its hash",
-    "file": "crates/core/src/ledger.rs",
-    "find": "    if sha256_hex(r.replay.as_bytes()) != b.replay_hash {",
-    "replace": "    if false {",
-    "test": "a_record_whose_score_does_not_match_its_replay_is_refused"
-  },
-  {
-    "name": "a worse record never replaces a better",
-    "file": "crates/core/src/ledger.rs",
-    "find": "            Some(e) if !beats(&r, &e.record) => false,",
-    "replace": "",
-    "test": "a_worse_record_never_replaces_a_better_one"
-  },
-  {
-    "name": "replays are kept for the top 100",
-    "file": "crates/core/src/ledger.rs",
-    "find": "                if rank < REPLAYS_PER_CHART && used + size <= REPLAY_BUDGET {",
-    "replace": "                if used + size <= REPLAY_BUDGET {",
-    "test": "the_ledger_drops_replays_below_the_top_100_and_records_below_200"
-  },
-  {
-    "name": "records are kept for the top 200",
-    "file": "crates/core/src/ledger.rs",
-    "find": "            for (_, player) in order.iter().skip(MAX_PER_CHART) {",
-    "replace": "            for (_, player) in order.iter().skip(MAX_PER_CHART * 9) {",
-    "test": "the_ledger_drops_replays_below_the_top_100_and_records_below_200"
-  },
-  {
-    "name": "the floor ignores one huge hit",
-    "file": "crates/core/src/generate.rs",
-    "find": "    let floor = strong * FLOOR_PCT / 100;",
-    "replace": "    let floor = sorted.last().copied().unwrap_or(0) as u64 * FLOOR_PCT / 100;",
-    "test": "one_huge_hit_does_not_empty_the_chart"
-  },
-  {
-    "name": "a whole-number tempo is preferred",
-    "file": "crates/core/src/beats.rs",
-    "find": "if whole_score * 100 >= best * WHOLE_BPM_PCT {",
-    "replace": "if false {",
-    "test": "a_whole_number_tempo_is_found_exactly"
-  },
-  {
-    "name": "a browser's decode shift moves song time",
-    "file": "crates/core/src/game.rs",
-    "find": "        let t = heard - start - offset + self.audio_shift_us;",
-    "replace": "        let t = heard - start - offset;",
-    "test": "a_browser_that_trims_the_song_s_start_is_moved_back_onto_the_chart"
-  },
-  {
-    "name": "a shift past the limit is ignored",
-    "file": "crates/core/src/game.rs",
-    "find": "(expected - here).abs() <= MAX_SHIFT_US",
-    "replace": "true",
-    "test": "a_browser_that_trims_the_song_s_start_is_moved_back_onto_the_chart"
-  },
-  {
-    "name": "the first sound is a strong attack",
-    "file": "crates/core/src/beats.rs",
-    "find": "(*s as i32).abs() * FIRST_SOUND_SHARE >= peak",
-    "replace": "(*s as i32).abs() > 0",
-    "test": "a_browser_that_trims_the_song_s_start_is_moved_back_onto_the_chart"
-  },
-  {
-    "name": "each maker is credited once",
-    "file": "crates/core/src/game.rs",
-    "find": "if s.by != OUR_OWN && !makers.contains(&s.by) {",
-    "replace": "if s.by != OUR_OWN {",
-    "test": "the_title_credits_each_maker_once_and_not_our_own"
-  },
-  {
-    "name": "a given tempo is kept",
-    "file": "crates/core/src/beats.rs",
-    "find": "    if let Some(bpm) = bpm_milli.filter(|b| *b > 0) {",
-    "replace": "    if let Some(bpm) = bpm_milli.filter(|b| *b < 0) {",
-    "test": "a_given_tempo_is_kept_and_only_the_first_beat_is_found"
-  },
-  {
-    "name": "targets are shared out by phrase",
-    "file": "crates/core/src/generate.rs",
-    "find": "    let phrase_slots = (PHRASE_BEATS * SLOTS_PER_BEAT) as usize;",
-    "replace": "    let phrase_slots = usize::MAX / 2;",
-    "test": "a_quiet_opening_still_gets_targets"
-  }
+ {
+  "name": "an empty title is refused",
+  "file": "crates/core/src/page.rs",
+  "find": "            Some(s) if s.trim().is_empty() => return Err(StringsError::Empty(key.to_string())),",
+  "replace": "            Some(_) if false => {}",
+  "test": "an_empty_title_is_rejected_by_name"
+ },
+ {
+  "name": "an unknown action is refused",
+  "file": "crates/core/src/game.rs",
+  "find": "other => return Err(format!(\"Unknown action \\\"{other}\\\".\")),",
+  "replace": "_ => {}",
+  "test": "unknown_actions_and_screens_are_refused_by_name"
+ },
+ {
+  "name": "the perfect window is inclusive",
+  "file": "crates/core/src/play.rs",
+  "find": "let j = if off.abs() <= d.perfect_us {",
+  "replace": "let j = if off.abs() < d.perfect_us {",
+  "test": "easy_window_edges_on_both_sides"
+ },
+ {
+  "name": "the great window decides great",
+  "file": "crates/core/src/play.rs",
+  "find": "} else if off.abs() <= d.great_us {",
+  "replace": "} else if off.abs() < d.perfect_us {",
+  "test": "master_window_edges_on_both_sides"
+ },
+ {
+  "name": "a press outside the good window is no hit",
+  "file": "crates/core/src/play.rs",
+  "find": "&& (t - target.t).abs() <= d.good_us",
+  "replace": "&& (t - target.t).abs() <= d.good_us + 1",
+  "test": "easy_window_edges_on_both_sides"
+ },
+ {
+  "name": "a press must land inside the circle",
+  "file": "crates/core/src/play.rs",
+  "find": "&& within(self.cursor, (target.x, target.y), d.radius)",
+  "replace": "&& within(self.cursor, (target.x, target.y), d.radius + 1)",
+  "test": "a_press_must_land_inside_the_circle"
+ },
+ {
+  "name": "overlapping targets take the earlier",
+  "file": "crates/core/src/play.rs",
+  "find": "            .find(|&k| {",
+  "replace": "            .filter(|&k| {",
+  "test": "two_overlapping_targets_take_the_earlier_first"
+ },
+ {
+  "name": "a held button presses once",
+  "file": "crates/core/src/play.rs",
+  "find": "        if self.held & bit != 0 {\n            return;\n        }",
+  "replace": "",
+  "test": "holding_a_key_down_presses_once"
+ },
+ {
+  "name": "a miss resets the combo",
+  "file": "crates/core/src/play.rs",
+  "find": "        if j == Judgement::Miss {\n            self.combo = 0;",
+  "replace": "        if j == Judgement::Miss {",
+  "test": "hand_worked_score_for_ten_targets_with_one_miss"
+ },
+ {
+  "name": "the multiplier is capped",
+  "file": "crates/core/src/play.rs",
+  "find": "(self.combo as i64).min(COMBO_CAP)",
+  "replace": "(self.combo as i64)",
+  "test": "the_multiplier_stops_growing_at_a_combo_of_100"
+ },
+ {
+  "name": "a tick off the path breaks the combo",
+  "file": "crates/core/src/play.rs",
+  "find": "                        } else {\n                            self.combo = 0;\n                        }",
+  "replace": "                        } else {\n                        }",
+  "test": "leaving_the_path_breaks_the_combo"
+ },
+ {
+  "name": "letting go early breaks the hold",
+  "file": "crates/core/src/play.rs",
+  "find": "let in_window = t >= end - self.d.good_us;",
+  "replace": "let in_window = true;",
+  "test": "letting_go_early_misses_the_end"
+ },
+ {
+  "name": "hold ticks score",
+  "file": "crates/core/src/play.rs",
+  "find": "self.score += TICK_POINTS;",
+  "replace": "",
+  "test": "a_hold_followed_to_the_end_scores_every_tick"
+ },
+ {
+  "name": "inputs use their own times",
+  "file": "crates/core/src/play.rs",
+  "find": "let t = input.at().max(self.now);",
+  "replace": "let t = self.now.max(0);",
+  "test": "the_same_presses_judge_the_same_at_30_60_and_144_frames"
+ },
+ {
+  "name": "a target outside the field is refused",
+  "file": "crates/core/src/chart.rs",
+  "find": "(X_MIN..=X_MAX).contains(&x) && (Y_MIN..=Y_MAX).contains(&y)",
+  "replace": "(X_MIN..=X_MAX).contains(&x)",
+  "test": "a_chart_with_a_target_outside_the_playfield_is_refused"
+ },
+ {
+  "name": "a hold path starts on its target",
+  "file": "crates/core/src/chart.rs",
+  "find": "if h.end <= t.t || h.path.len() < 2 || !starts_here {",
+  "replace": "if h.end <= t.t || h.path.len() < 2 {",
+  "test": "a_hold_whose_path_does_not_start_on_its_target_is_refused"
+ },
+ {
+  "name": "a hold point moves along the path",
+  "file": "crates/core/src/chart.rs",
+  "find": "let i = (along / span).min(last - 1) as usize;",
+  "replace": "let i = 0usize;",
+  "test": "a_hold_point_moves_evenly_along_its_path"
+ },
+ {
+  "name": "tempo is refined to the microsecond",
+  "file": "crates/core/src/beats.rs",
+  "find": "    let step = (ON_LINE_US * around / (2 * length.max(1))).max(1);",
+  "replace": "    let step = (ON_LINE_US * around / (2 * length.max(1))).max(1) * 400;",
+  "test": "a_whole_number_tempo_is_found_exactly"
+ },
+ {
+  "name": "a slow beat is heard at double speed",
+  "file": "crates/core/src/beats.rs",
+  "find": "const PRIOR_BPM: i64 = 120;",
+  "replace": "const PRIOR_BPM: i64 = 80;",
+  "test": "a_slow_song_is_doubled_into_the_comfortable_range"
+ },
+ {
+  "name": "onsets are rises, not levels",
+  "file": "crates/core/src/beats.rs",
+  "find": "(logs[n][b] - logs[n - 1][b]).max(0)",
+  "replace": "logs[n][b]",
+  "test": "a_held_note_is_an_onset_where_it_starts_only"
+ },
+ {
+  "name": "silence has no beat",
+  "file": "crates/core/src/beats.rs",
+  "find": "    if times.len() < 8 {\n        return None;\n    }",
+  "replace": "",
+  "test": "silence_has_no_beat"
+ },
+ {
+  "name": "the minimum gap holds",
+  "file": "crates/core/src/generate.rs",
+  "find": "if chosen.iter().all(|&c| (a.slot_time(c) - t).abs() >= d.min_gap_us) {",
+  "replace": "if chosen.iter().all(|&c| (a.slot_time(c) - t).abs() >= 0) {",
+  "test": "targets_sit_on_the_grid_and_never_closer_than_the_gap"
+ },
+ {
+  "name": "placement avoids visible targets",
+  "file": "crates/core/src/generate.rs",
+  "find": "            let room = visible\n                .iter()\n                .map(|&v| dist2(v, (x, y)))\n                .min()\n                .unwrap_or(i64::MAX);",
+  "replace": "            let room = i64::MAX;",
+  "test": "no_two_visible_targets_overlap"
+ },
+ {
+  "name": "placement stays inside",
+  "file": "crates/core/src/generate.rs",
+  "find": "            if !inside(x, y) {\n                continue;\n            }",
+  "replace": "",
+  "test": "targets_stay_inside_the_playfield"
+ },
+ {
+  "name": "combo restarts each phrase",
+  "file": "crates/core/src/generate.rs",
+  "find": "            phrase = this_phrase;\n            combo = 0;",
+  "replace": "            phrase = this_phrase;",
+  "test": "combo_numbers_start_again_each_phrase"
+ },
+ {
+  "name": "generation is seeded",
+  "file": "crates/core/src/generate.rs",
+  "find": "let mut rng = Rng::new(seed ^ ((difficulty as u64 + 1) << 32));",
+  "replace": "let mut rng = Rng::new((difficulty as u64 + 1) << 32);",
+  "test": "generation_is_the_same_every_time"
+ },
+ {
+  "name": "harder difficulties keep more",
+  "file": "crates/core/src/generate.rs",
+  "find": "let keep = ((group.len() as i64 * d.keep_pct + above - 1) / above) as usize;",
+  "replace": "let keep = group.len();",
+  "test": "each_difficulty_is_harder_than_the_one_below"
+ },
+ {
+  "name": "song time takes the audio offset",
+  "file": "crates/core/src/game.rs",
+  "find": "        let t = heard - start - offset + self.audio_shift_us;\n        session.play.input",
+  "replace": "        let t = heard - start + self.audio_shift_us;\n        session.play.input",
+  "test": "song_time_is_the_heard_time_less_the_start_and_the_offset"
+ },
+ {
+  "name": "the heard time follows the output timestamp",
+  "file": "crates/core/src/game.rs",
+  "find": "        ctx_us + (stamp_us - perf_us)",
+  "replace": "        ctx_us",
+  "test": "song_time_is_the_heard_time_less_the_start_and_the_offset"
+ },
+ {
+  "name": "calibration takes the median",
+  "file": "crates/core/src/game.rs",
+  "find": "let ms = median(&cal.offsets) / MS;",
+  "replace": "let ms = cal.offsets[0] / MS;",
+  "test": "calibration_of_taps_20_ms_late_sets_an_offset_of_20_ms"
+ },
+ {
+  "name": "settings stop at their limits",
+  "file": "crates/core/src/game.rs",
+  "find": "*value = next.clamp(range.0, range.1);",
+  "replace": "*value = next;",
+  "test": "settings_step_and_stop_at_their_limits"
+ },
+ {
+  "name": "a name is cut to sixteen",
+  "file": "crates/core/src/game.rs",
+  "find": "        .take(NAME_MAX)\n",
+  "replace": "        .take(99)\n",
+  "test": "a_name_is_trimmed_cleaned_and_cut_to_sixteen"
+ },
+ {
+  "name": "a play waits for its audio",
+  "file": "crates/core/src/game.rs",
+  "find": "if url != self.chart_url() || self.audio_ready.as_deref() != Some(self.audio_url().as_str()) {",
+  "replace": "if url != self.chart_url() {",
+  "test": "song_time_is_the_heard_time_less_the_start_and_the_offset"
+ },
+ {
+  "name": "pause freezes input",
+  "file": "crates/core/src/game.rs",
+  "find": "        if self.paused {\n            return;\n        }\n        let pointer",
+  "replace": "        let pointer",
+  "test": "pausing_suspends_the_audio_and_freezes_input"
+ },
+ {
+  "name": "a refused save is kept",
+  "file": "crates/core/src/game.rs",
+  "find": "                self.commands.push(Command::KeepRefused { text: kept });",
+  "replace": "                let _ = kept;",
+  "test": "a_save_from_any_build_restores_within_the_limits"
+ },
+ {
+  "name": "a missing string is refused",
+  "file": "crates/core/src/page.rs",
+  "find": "            None => return Err(StringsError::Missing(key)),",
+  "replace": "            None => {}",
+  "test": "a_missing_key_is_rejected_by_name"
+ },
+ {
+  "name": "numbers are grouped",
+  "file": "crates/core/src/page.rs",
+  "find": "        if k > 0 && (digits.len() - k).is_multiple_of(3) {",
+  "replace": "        if false {",
+  "test": "numbers_are_formatted_by_hand_worked_cases"
+ },
+ {
+  "name": "a bound key presses",
+  "file": "crates/core/src/game.rs",
+  "find": "        self.input(kind, (k + 1) as u8, 0, 0, 0, 0, ctx_us, perf_us, stamp_us);\n        true",
+  "replace": "        let _ = k;\n        true",
+  "test": "w_a_s_d_can_replace_z_and_x_and_each_presses"
+ },
+ {
+  "name": "a bound key is not bound twice",
+  "file": "crates/core/src/game.rs",
+  "find": "            if keys.iter().any(|k| k == code) {",
+  "replace": "            if false {",
+  "test": "a_key_already_bound_is_refused_and_escape_cancels"
+ },
+ {
+  "name": "press keys are capped",
+  "file": "crates/core/src/game.rs",
+  "find": "                if self.kept.settings.keys.len() >= MAX_KEYS {",
+  "replace": "                if false {",
+  "test": "there_are_at_most_eight_press_keys"
+ },
+ {
+  "name": "the mouse may only aim",
+  "file": "crates/core/src/game.rs",
+  "find": "        let kind = if button == MOUSE && !self.kept.settings.mouse_presses {",
+  "replace": "        let kind = if false {",
+  "test": "with_the_mouse_set_to_aim_only_a_click_moves_and_does_not_press"
+ },
+ {
+  "name": "a version one save is migrated",
+  "file": "crates/core/src/save.rs",
+  "find": "        1 => {\n            let settings",
+  "replace": "        9 => {\n            let settings",
+  "test": "a_version_one_save_keeps_its_settings_and_gets_z_and_x"
+ },
+ {
+  "name": "another build is let in",
+  "file": "crates/core/src/online.rs",
+  "find": "if protocol != PROTOCOL || build != self.build {",
+  "replace": "if protocol != PROTOCOL {",
+  "test": "another_build_or_protocol_is_turned_away_with_a_reason"
+ },
+ {
+  "name": "the lobby holds eight",
+  "file": "crates/core/src/online.rs",
+  "find": "if self.role == Role::Host && self.admitted().len() + 1 >= LOBBY_SEATS {",
+  "replace": "if false {",
+  "test": "a_ninth_is_told_the_lobby_is_full"
+ },
+ {
+  "name": "the host stamps who scored",
+  "file": "crates/core/src/online.rs",
+  "find": "                    s.player = self.peers[&peer]",
+  "replace": "                    s.player = s.player.clone() + &self.peers[&peer]",
+  "test": "a_joiner_cannot_post_a_score_as_someone_else"
+ },
+ {
+  "name": "start waits for every ready",
+  "file": "crates/core/src/online.rs",
+  "find": "self.role == Role::Host && self.peers.values().filter(|s| s.hello.is_some()).all(|s| s.ready)",
+  "replace": "self.role == Role::Host",
+  "test": "the_host_waits_for_every_ready"
+ },
+ {
+  "name": "a stranger's message is garbage",
+  "file": "crates/core/src/online.rs",
+  "find": "            _ if !said_hello => self.status = GARBLED,",
+  "replace": "",
+  "test": "a_peer_that_has_not_said_hello_changes_nothing"
+ },
+ {
+  "name": "signatures are checked",
+  "file": "crates/core/src/ledger.rs",
+  "find": "    if !verify_signature(r) {",
+  "replace": "    if false && !verify_signature(r) {",
+  "test": "a_record_with_a_bad_signature_is_refused"
+ },
+ {
+  "name": "replays are checked",
+  "file": "crates/core/src/ledger.rs",
+  "find": "    let same = p.score == b.score",
+  "replace": "    let same = true || p.score == b.score",
+  "test": "a_record_whose_score_does_not_match_its_replay_is_refused"
+ },
+ {
+  "name": "a replay must match its hash",
+  "file": "crates/core/src/ledger.rs",
+  "find": "    if sha256_hex(r.replay.as_bytes()) != b.replay_hash {",
+  "replace": "    if false {",
+  "test": "a_record_whose_score_does_not_match_its_replay_is_refused"
+ },
+ {
+  "name": "a worse record never replaces a better",
+  "file": "crates/core/src/ledger.rs",
+  "find": "            Some(e) if !beats(&r, &e.record) => false,",
+  "replace": "",
+  "test": "a_worse_record_never_replaces_a_better_one"
+ },
+ {
+  "name": "replays are kept for the top 100",
+  "file": "crates/core/src/ledger.rs",
+  "find": "                if rank < REPLAYS_PER_CHART && used + size <= REPLAY_BUDGET {",
+  "replace": "                if used + size <= REPLAY_BUDGET {",
+  "test": "the_ledger_drops_replays_below_the_top_100_and_records_below_200"
+ },
+ {
+  "name": "records are kept for the top 200",
+  "file": "crates/core/src/ledger.rs",
+  "find": "            for (_, player) in order.iter().skip(MAX_PER_CHART) {",
+  "replace": "            for (_, player) in order.iter().skip(MAX_PER_CHART * 9) {",
+  "test": "the_ledger_drops_replays_below_the_top_100_and_records_below_200"
+ },
+ {
+  "name": "the floor ignores one huge hit",
+  "file": "crates/core/src/generate.rs",
+  "find": "    let floor = strong * FLOOR_PCT / 100;",
+  "replace": "    let floor = sorted.last().copied().unwrap_or(0) as u64 * FLOOR_PCT / 100;",
+  "test": "one_huge_hit_does_not_empty_the_chart"
+ },
+ {
+  "name": "a whole-number tempo is preferred",
+  "file": "crates/core/src/beats.rs",
+  "find": "if whole.hits * 100 >= best.hits * WHOLE_BPM_PCT {",
+  "replace": "if whole.hits * 100 >= best.hits * 1000 {",
+  "test": "a_whole_number_tempo_is_found_exactly"
+ },
+ {
+  "name": "a browser's decode shift moves song time",
+  "file": "crates/core/src/game.rs",
+  "find": "        let t = heard - start - offset + self.audio_shift_us;",
+  "replace": "        let t = heard - start - offset;",
+  "test": "a_browser_that_trims_the_song_s_start_is_moved_back_onto_the_chart"
+ },
+ {
+  "name": "a shift past the limit is ignored",
+  "file": "crates/core/src/game.rs",
+  "find": "(expected - here).abs() <= MAX_SHIFT_US",
+  "replace": "true",
+  "test": "a_browser_that_trims_the_song_s_start_is_moved_back_onto_the_chart"
+ },
+ {
+  "name": "the first sound is a strong attack",
+  "file": "crates/core/src/beats.rs",
+  "find": "(*s as i32).abs() * FIRST_SOUND_SHARE >= peak",
+  "replace": "(*s as i32).abs() > 0",
+  "test": "a_browser_that_trims_the_song_s_start_is_moved_back_onto_the_chart"
+ },
+ {
+  "name": "each maker is credited once",
+  "file": "crates/core/src/game.rs",
+  "find": "if s.by != OUR_OWN && !makers.contains(&s.by) {",
+  "replace": "if s.by != OUR_OWN {",
+  "test": "the_title_credits_each_maker_once_and_not_our_own"
+ },
+ {
+  "name": "a given tempo is kept",
+  "file": "crates/core/src/beats.rs",
+  "find": "    let beats: Vec<Vec<Fit>> = if let Some(bpm) = bpm_milli.filter(|b| *b > 0) {",
+  "replace": "    let beats: Vec<Vec<Fit>> = if let Some(bpm) = bpm_milli.filter(|b| *b < 0) {",
+  "test": "a_given_tempo_is_kept_and_only_the_first_beat_is_found"
+ },
+ {
+  "name": "targets are shared out by phrase",
+  "file": "crates/core/src/generate.rs",
+  "find": "    let phrase_lines = (PHRASE_BEATS * a.division) as usize;",
+  "replace": "    let phrase_lines = usize::MAX / 2;",
+  "test": "a_quiet_opening_still_gets_targets"
+ },
+ {
+  "name": "120 is preferred to 160 on a shared grid",
+  "file": "crates/core/src/beats.rs",
+  "find": "const PRIOR_BPM: i64 = 120;",
+  "replace": "const PRIOR_BPM: i64 = 170;",
+  "test": "a_dotted_rhythm_at_120_is_found_as_120_not_160"
+ },
+ {
+  "name": "the tempo prior falls away",
+  "file": "crates/core/src/beats.rs",
+  "find": "    1000 * 8 * s * s / (8 * s * s + 4 * l * l * s + l * l * l * l)",
+  "replace": "    1000 * 8 * s * s / (8 * s * s + 4 * l * l * s)",
+  "test": "the_tempo_prior_favours_120_and_falls_away_by_octaves"
+ },
+ {
+  "name": "triplet grids are tried",
+  "file": "crates/core/src/beats.rs",
+  "find": "const DIVISIONS: [i64; 4] = [2, 4, 3, 6];",
+  "replace": "const DIVISIONS: [i64; 4] = [2, 4, 4, 4];",
+  "test": "a_song_in_triplets_gets_lines_on_its_triplets"
+ },
+ {
+  "name": "a line takes only an onset on it",
+  "file": "crates/core/src/beats.rs",
+  "find": "        if line >= 0 && (line as usize) < count && (t - at).abs() <= ON_LINE_US {",
+  "replace": "        if line >= 0 && (line as usize) < count {",
+  "test": "a_line_with_no_onset_on_it_has_no_strength"
+ },
+ {
+  "name": "each difficulty chooses from the one above",
+  "file": "crates/core/src/generate.rs",
+  "find": "        pool = thin(a, &pool, &DIFFICULTIES[k], above);",
+  "replace": "        pool = thin(a, &pool, &DIFFICULTIES[k], above);\n        if k == difficulty {\n            let mut fresh: Vec<usize> = (0..a.slots.len()).filter(|&q| a.slots[q] > 0 && a.slot_time(q) >= LEAD_IN_US && a.slot_time(q) <= last_t).collect();\n            fresh.retain(|&q| q % 3 != 1);\n            pool = thin(a, &fresh, &DIFFICULTIES[k], 100);\n        }",
+  "test": "each_difficulty_s_targets_are_all_in_the_one_above"
+ },
+ {
+  "name": "a target needs an onset",
+  "file": "crates/core/src/generate.rs",
+  "find": ".filter(|&q| a.slots[q] as u64 > floor && a.slot_time(q) <= last_t",
+  "replace": ".filter(|&q| a.slot_time(q) <= last_t",
+  "test": "every_target_sits_on_an_onset"
+ },
+ {
+  "name": "circle size follows how busy a song is",
+  "file": "crates/core/src/generate.rs",
+  "find": "    isqrt(per_minute_milli * 10 / HEARD_PER_MINUTE).clamp(SIZE_MIN_PCT, SIZE_MAX_PCT)",
+  "replace": "    let _ = per_minute_milli;\n    100",
+  "test": "a_busier_song_gets_bigger_circles_within_bounds"
+ },
+ {
+  "name": "play judges by the chart's circle size",
+  "file": "crates/core/src/play.rs",
+  "find": "        if chart.radius > 0 {\n            d.radius = chart.radius;\n        }",
+  "replace": "        if chart.radius < 0 {\n            d.radius = chart.radius;\n        }",
+  "test": "a_chart_with_its_own_circle_size_is_judged_by_it"
+ },
+ {
+  "name": "a circle size out of range is refused",
+  "file": "crates/core/src/chart.rs",
+  "find": "        if self.radius != 0 && !(RADIUS_MIN..=RADIUS_MAX).contains(&self.radius) {",
+  "replace": "        if false && !(RADIUS_MIN..=RADIUS_MAX).contains(&self.radius) {",
+  "test": "a_chart_with_a_circle_size_out_of_range_is_refused"
+ },
+ {
+  "name": "one circle size a song",
+  "file": "crates/core/src/generate.rs",
+  "find": "    let lines = heard(a);",
+  "replace": "    let lines: Vec<usize> = heard(a).into_iter().step_by(9 - difficulty * 2).collect();",
+  "test": "each_difficulty_s_circles_are_smaller_than_the_one_below_on_a_song"
+ }
 ]

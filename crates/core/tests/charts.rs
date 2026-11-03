@@ -136,7 +136,7 @@ fn no_two_visible_targets_overlap_in_a_committed_chart() {
     for (s, _, charts) in songs() {
         for c in charts {
             let d = DIFFICULTIES[c.difficulty];
-            let sep = 2 * d.radius as i64;
+            let sep = 2 * c.radius as i64;
             for (k, t) in c.targets.iter().enumerate() {
                 for p in &c.targets[..k] {
                     if p.end() + d.good_us >= t.t - d.approach_us {
