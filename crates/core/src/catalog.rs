@@ -24,6 +24,11 @@ pub struct Song {
     /// when the beat finder should not guess it (R6.4).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bpm_milli: Option<i64>,
+    /// Charts made from the true chart: Master a target on every hit, each
+    /// difficulty below it the one above with its least-stressed hits taken
+    /// out (R7.6).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub true_chart: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -110,7 +115,7 @@ pub fn chart_file(song: &str, difficulty: usize) -> String {
 pub fn charts_for(song: &Song, a: &Analysis) -> Vec<(String, String)> {
     (0..DIFFICULTIES.len())
         .map(|d| {
-            let c = generate::chart(&song.id, a, d, song.seed);
+            let c = generate::chart_with(&song.id, a, d, song.seed, song.true_chart);
             (chart_file(&song.id, d), pretty(&c))
         })
         .collect()

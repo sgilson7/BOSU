@@ -32,6 +32,14 @@ const LEAD_OUT_US: i64 = 1_500_000;
 /// huge hit in a real song set the bar so high that Grunge Dome kept two
 /// targets on Easy (R6.2).
 const FLOOR_PCT: u64 = 8;
+/// From the true chart, each difficulty's minimum gap is at most a beat
+/// divided by this (Easy a beat, Normal a half, Hard a third, Expert a
+/// quarter), so a song's triplets fit where a fixed time would cut them by
+/// a few ms (R7.6). The hardest has none.
+const TRUE_GAP_DIVISORS: [i64; 5] = [1, 2, 3, 4, 1];
+/// The true chart's floor, as a share (percent) of the strong slots: low,
+/// to leave out only what is barely there.
+const TRUE_FLOOR_PCT: u64 = 3;
 /// The percentile that counts as strong.
 const STRONG_PCT: usize = 95;
 /// Tries at placing one target before taking the least-bad spot.
@@ -88,10 +96,14 @@ fn weight(q: usize, division: i64) -> u64 {
 /// The grid lines with an onset strong enough to be a target, in time
 /// order.
 pub fn heard(a: &Analysis) -> Vec<usize> {
+    heard_above(a, FLOOR_PCT)
+}
+
+fn heard_above(a: &Analysis, floor_pct: u64) -> Vec<usize> {
     let mut sorted: Vec<u32> = a.slots.iter().copied().filter(|&v| v > 0).collect();
     sorted.sort_unstable();
     let strong = sorted.get(sorted.len() * STRONG_PCT / 100).copied().unwrap_or(0) as u64;
-    let floor = strong * FLOOR_PCT / 100;
+    let floor = strong * floor_pct / 100;
     let last_t = a.length_us - LEAD_OUT_US;
     (0..a.slots.len())
         .filter(|&q| a.slots[q] as u64 > floor && a.slot_time(q) <= last_t && a.slot_time(q) >= LEAD_IN_US)
@@ -100,10 +112,32 @@ pub fn heard(a: &Analysis) -> Vec<usize> {
 
 /// The grid lines that become targets at a difficulty, in time order.
 pub fn choose_slots(a: &Analysis, difficulty: usize) -> Vec<usize> {
-    let mut pool = heard(a);
+    choose_slots_with(a, difficulty, false)
+}
+
+/// As `choose_slots`; with `from_true`, the hardest difficulty is the true
+/// chart, a target on every hit the song has, at any spacing, and each
+/// difficulty below drops the hits a player hears least, by their accent,
+/// from the one above (R7.6).
+pub fn choose_slots_with(a: &Analysis, difficulty: usize, from_true: bool) -> Vec<usize> {
+    let hardest = DIFFICULTIES.len() - 1;
+    let mut pool = if from_true {
+        heard_above(a, TRUE_FLOOR_PCT)
+    } else {
+        heard(a)
+    };
     let mut above = 100;
     for k in (difficulty..DIFFICULTIES.len()).rev() {
-        pool = thin(a, &pool, &DIFFICULTIES[k], above);
+        if from_true && k == hardest {
+            continue;
+        }
+        let d = &DIFFICULTIES[k];
+        let gap = if from_true {
+            d.min_gap_us.min(a.beat_us / TRUE_GAP_DIVISORS[k])
+        } else {
+            d.min_gap_us
+        };
+        pool = thin(a, &pool, d, above, from_true, gap);
         above = DIFFICULTIES[k].keep_pct;
     }
     pool
@@ -113,14 +147,27 @@ pub fn choose_slots(a: &Analysis, difficulty: usize) -> Vec<usize> {
 /// difficulty above it (or every heard line, for the hardest), whose share
 /// was `above` percent: each phrase keeps `keep_pct / above` of its pool,
 /// so the shares multiply out to `keep_pct` of what is heard.
-fn thin(a: &Analysis, pool: &[usize], d: &Difficulty, above: i64) -> Vec<usize> {
-    let score = |q: usize| a.slots[q] as u64 * weight(q, a.division);
+fn thin(
+    a: &Analysis,
+    pool: &[usize],
+    d: &Difficulty,
+    above: i64,
+    by_accent: bool,
+    min_gap_us: i64,
+) -> Vec<usize> {
+    let stress = |q: usize| match (by_accent, a.accents.get(q)) {
+        (true, Some(&v)) => v as u64,
+        _ => a.slots[q] as u64,
+    };
+    let score = |q: usize| stress(q) * weight(q, a.division);
     let by_score = |p: &usize, q: &usize| score(*q).cmp(&score(*p)).then(p.cmp(q));
     let phrase_lines = (PHRASE_BEATS * a.division) as usize;
+    // from the true chart any line may stay, its accent and place in the
+    // beat deciding; otherwise only the difficulty's grid
     let on: Vec<usize> = pool
         .iter()
         .copied()
-        .filter(|&q| on_grid(q, a.division, d.grid))
+        .filter(|&q| by_accent || on_grid(q, a.division, d.grid))
         .collect();
     // The strongest share within each phrase, so a quiet verse gets targets
     // in proportion and a loud chorus does not take them all (R6.7).
@@ -143,7 +190,7 @@ fn thin(a: &Analysis, pool: &[usize], d: &Difficulty, above: i64) -> Vec<usize> 
     let mut chosen: Vec<usize> = Vec::new();
     for &q in kept.iter() {
         let t = a.slot_time(q);
-        if chosen.iter().all(|&c| (a.slot_time(c) - t).abs() >= d.min_gap_us) {
+        if chosen.iter().all(|&c| (a.slot_time(c) - t).abs() >= min_gap_us) {
             chosen.push(q);
         }
     }
@@ -174,8 +221,13 @@ fn isqrt(v: i64) -> i64 {
 
 /// Generates one chart.
 pub fn chart(song: &str, a: &Analysis, difficulty: usize, seed: u64) -> Chart {
+    chart_with(song, a, difficulty, seed, false)
+}
+
+/// As `chart`; `from_true` as in `choose_slots_with`.
+pub fn chart_with(song: &str, a: &Analysis, difficulty: usize, seed: u64, from_true: bool) -> Chart {
     let d = DIFFICULTIES[difficulty];
-    let slots = choose_slots(a, difficulty);
+    let slots = choose_slots_with(a, difficulty, from_true);
     let times: Vec<i64> = slots.iter().map(|&q| a.slot_time(q)).collect();
     let lines = heard(a);
     let span = match (lines.first(), lines.last()) {
@@ -594,6 +646,101 @@ pub mod tests {
                     pair[0].radius,
                     pair[1].radius
                 );
+            }
+        }
+    }
+
+    #[test]
+    fn the_true_chart_has_a_target_on_every_hit() {
+        // Master from the true chart: every heard line above the true floor,
+        // however close (R7.6)
+        let a = busy_song(128, 40, 41);
+        let c = chart_with("test", &a, 4, 1, true);
+        let hits = heard_above(&a, TRUE_FLOOR_PCT);
+        assert_eq!(c.targets.len(), hits.len());
+        let times: Vec<i64> = hits.iter().map(|&q| a.slot_time(q)).collect();
+        assert_eq!(c.targets.iter().map(|t| t.t).collect::<Vec<_>>(), times);
+    }
+
+    #[test]
+    fn from_the_true_chart_the_most_stressed_hits_stay() {
+        // one off-beat hit a bar made far more stressed than anything else
+        // stays on Easy, over the beats beside it (R7.6)
+        let mut a = busy_song(128, 40, 42);
+        let d = a.division as usize;
+        let bar = 4 * d;
+        let mut loud = Vec::new();
+        for q in (d / 2..a.slots.len()).step_by(bar) {
+            if a.slots[q] > 0 && a.slot_time(q) > 2_000_000 && a.slot_time(q) < a.length_us - 3_000_000 {
+                a.accents[q] = 100_000;
+                loud.push(a.slot_time(q));
+            }
+        }
+        assert!(loud.len() > 10, "{} stressed off-beats", loud.len());
+        let easy = chart_with("test", &a, 0, 1, true);
+        let kept = loud
+            .iter()
+            .filter(|t| easy.targets.iter().any(|x| x.t == **t))
+            .count();
+        assert!(
+            kept * 10 >= loud.len() * 9,
+            "{kept} of {} stressed off-beats on Easy",
+            loud.len()
+        );
+    }
+
+    #[test]
+    fn from_the_true_chart_triplets_at_120_stay_on_hard() {
+        // a third of a beat at 120 is 166.7 ms, under Expert's 170 ms and
+        // Hard's 260: from the true chart Hard's gap is at most a third of a
+        // beat, so Hard keeps two targets a third of a beat apart (R7.6)
+        let beat = 500_000;
+        let mut c: Vec<(i64, i32)> = Vec::new();
+        let mut t = 300_000;
+        while t < 30 * US {
+            c.push((t, 20_000));
+            c.push((t + beat / 3, 12_000));
+            c.push((t + 2 * beat / 3, 12_000));
+            t += beat;
+        }
+        let a = analyse(&song(30, &c, 43)).expect("a beat");
+        let hard = chart_with("test", &a, 2, 1, true);
+        let close = hard
+            .targets
+            .windows(2)
+            .filter(|p| p[1].t - p[0].t < 170_000)
+            .count();
+        assert!(close > 10, "{close} pairs a third of a beat apart on Hard");
+        for p in hard.targets.windows(2) {
+            assert!(p[1].t - p[0].t >= beat / 3 - 1, "{} and {}", p[0].t, p[1].t);
+        }
+    }
+
+    #[test]
+    fn from_the_true_chart_each_difficulty_is_within_the_one_above() {
+        for (bpm, seed) in [(100, 44), (128, 45), (170, 46)] {
+            // accents that do not follow the onsets' strength, as in a mix
+            let mut a = busy_song(bpm, 40, seed);
+            let mut rng = Rng::new(seed);
+            for v in a.accents.iter_mut().filter(|v| **v > 0) {
+                *v = rng.between(1, 3000) as u32;
+            }
+            let charts: Vec<Chart> = (0..5).map(|d| chart_with("test", &a, d, 7, true)).collect();
+            for pair in charts.windows(2) {
+                let above: Vec<i64> = pair[1].targets.iter().map(|t| t.t).collect();
+                assert!(pair[0].targets.len() < pair[1].targets.len());
+                for t in &pair[0].targets {
+                    assert!(
+                        above.contains(&t.t),
+                        "{bpm} bpm: {} at {}",
+                        DIFFICULTIES[pair[0].difficulty].key,
+                        t.t
+                    );
+                }
+            }
+            for c in &charts {
+                let p = replay(c.clone(), &perfect_inputs(c));
+                assert_eq!(p.counts[Judgement::Perfect as usize] as usize, c.targets.len());
             }
         }
     }

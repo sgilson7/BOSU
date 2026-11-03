@@ -149,7 +149,7 @@
  {
   "name": "the minimum gap holds",
   "file": "crates/core/src/generate.rs",
-  "find": "if chosen.iter().all(|&c| (a.slot_time(c) - t).abs() >= d.min_gap_us) {",
+  "find": "if chosen.iter().all(|&c| (a.slot_time(c) - t).abs() >= min_gap_us) {",
   "replace": "if chosen.iter().all(|&c| (a.slot_time(c) - t).abs() >= 0) {",
   "test": "targets_sit_on_the_grid_and_never_closer_than_the_gap"
  },
@@ -373,8 +373,8 @@
  {
   "name": "the floor ignores one huge hit",
   "file": "crates/core/src/generate.rs",
-  "find": "    let floor = strong * FLOOR_PCT / 100;",
-  "replace": "    let floor = sorted.last().copied().unwrap_or(0) as u64 * FLOOR_PCT / 100;",
+  "find": "    let floor = strong * floor_pct / 100;",
+  "replace": "    let floor = sorted.last().copied().unwrap_or(0) as u64 * floor_pct / 100;",
   "test": "one_huge_hit_does_not_empty_the_chart"
  },
  {
@@ -457,8 +457,8 @@
  {
   "name": "each difficulty chooses from the one above",
   "file": "crates/core/src/generate.rs",
-  "find": "        pool = thin(a, &pool, &DIFFICULTIES[k], above);",
-  "replace": "        pool = thin(a, &pool, &DIFFICULTIES[k], above);\n        if k == difficulty {\n            let mut fresh: Vec<usize> = (0..a.slots.len()).filter(|&q| a.slots[q] > 0 && a.slot_time(q) >= LEAD_IN_US && a.slot_time(q) <= last_t).collect();\n            fresh.retain(|&q| q % 3 != 1);\n            pool = thin(a, &fresh, &DIFFICULTIES[k], 100);\n        }",
+  "find": "        pool = thin(a, &pool, d, above, from_true, gap);",
+  "replace": "        pool = thin(a, &pool, d, above, from_true, gap);\n        if k == difficulty {\n            let mut fresh = heard(a);\n            fresh.retain(|&q| q % 3 != 1);\n            pool = thin(a, &fresh, d, 100, from_true, gap);\n        }",
   "test": "each_difficulty_s_targets_are_all_in_the_one_above"
  },
  {
@@ -495,5 +495,40 @@
   "find": "    let lines = heard(a);",
   "replace": "    let lines: Vec<usize> = heard(a).into_iter().step_by(9 - difficulty * 2).collect();",
   "test": "each_difficulty_s_circles_are_smaller_than_the_one_below_on_a_song"
+ },
+ {
+  "name": "a hit's accent is the whole mix's rise",
+  "file": "crates/core/src/beats.rs",
+  "find": "    (log2_256(loud) - log2_256(quiet.max(1))).max(0)",
+  "replace": "    let _ = quiet;\n    log2_256(loud)",
+  "test": "a_hit_that_lifts_the_whole_mix_is_stressed_more_than_one_that_does_not"
+ },
+ {
+  "name": "the true chart keeps every hit",
+  "file": "crates/core/src/generate.rs",
+  "find": "        if from_true && k == hardest {",
+  "replace": "        if from_true && k == hardest && false {",
+  "test": "the_true_chart_has_a_target_on_every_hit"
+ },
+ {
+  "name": "from the true chart, accent decides",
+  "file": "crates/core/src/generate.rs",
+  "find": "        (true, Some(&v)) => v as u64,",
+  "replace": "        (true, Some(&_v)) => a.slots[q] as u64,",
+  "test": "from_the_true_chart_the_most_stressed_hits_stay"
+ },
+ {
+  "name": "from the true chart, gaps follow the beat",
+  "file": "crates/core/src/generate.rs",
+  "find": "            d.min_gap_us.min(a.beat_us / TRUE_GAP_DIVISORS[k])",
+  "replace": "            d.min_gap_us",
+  "test": "from_the_true_chart_triplets_at_120_stay_on_hard"
+ },
+ {
+  "name": "from the true chart, each thins the one above",
+  "file": "crates/core/src/generate.rs",
+  "find": "        pool = thin(a, &pool, d, above, from_true, gap);",
+  "replace": "        pool = thin(a, &heard_above(a, TRUE_FLOOR_PCT), d, 100, from_true, gap);",
+  "test": "from_the_true_chart_each_difficulty_is_within_the_one_above"
  }
 ]

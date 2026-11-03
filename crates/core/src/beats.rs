@@ -49,6 +49,11 @@ pub struct Analysis {
     /// The strongest onset on each grid line from `first_beat_us`, or 0
     /// where no onset is (R7.2).
     pub slots: Vec<u32>,
+    /// How much louder the whole mix gets at each grid line's onset (see
+    /// `accent`), or 0 where no onset is: which hits a player hears as
+    /// stressed (R7.6).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub accents: Vec<u32>,
     /// Where the first sound is in this decode. A browser that trims the
     /// start of an MP3 differently finds it elsewhere, and the game moves
     /// song time by the difference (R6.6).
@@ -105,6 +110,12 @@ fn log2_256(v: i64) -> i64 {
 
 /// One onset strength per hop.
 pub fn envelope(samples: &[i16]) -> Vec<i64> {
+    envelope_of(&bands(samples))
+}
+
+/// Each hop's energy in three bands: below about 200 Hz, 200 Hz to 2 kHz,
+/// and above.
+fn bands(samples: &[i16]) -> Vec<[i64; 3]> {
     // one-pole low-pass filters, in 1024ths: about 200 Hz and 2 kHz
     const LOW_A: i64 = 58;
     const MID_A: i64 = 480;
@@ -120,6 +131,27 @@ pub fn envelope(samples: &[i16]) -> Vec<i64> {
         hop[1] += ((lp_mid - lp_low) >> 10).abs();
         hop[2] += ((x - lp_mid) >> 10).abs();
     }
+    bands
+}
+
+/// Hops before a hit over which the quiet it rises from is found, and hops
+/// from it over which its loudest is found.
+const ACCENT_BEFORE: usize = 4;
+const ACCENT_AFTER: usize = 3;
+
+/// How much louder the whole mix gets at the hit in hop `k`, in 256ths of a
+/// doubling: its loudest against the quietest just before it. A kick or a
+/// snare lifts the whole mix; a hi-hat over a held chord barely does, where
+/// its own band's rise can be as large as a kick's (R7.6).
+fn accent(bands: &[[i64; 3]], k: usize) -> i64 {
+    let total = |i: usize| bands.get(i).map(|b| b[0] + b[1] + b[2]).unwrap_or(0);
+    let loud = (k..k + ACCENT_AFTER).map(total).max().unwrap_or(0);
+    let quiet = (k.saturating_sub(ACCENT_BEFORE)..k).map(total).min().unwrap_or(0);
+    (log2_256(loud) - log2_256(quiet.max(1))).max(0)
+}
+
+fn envelope_of(bands: &[[i64; 3]]) -> Vec<i64> {
+    let hops = bands.len();
     let logs: Vec<[i64; 3]> = bands
         .iter()
         .map(|b| [log2_256(b[0]), log2_256(b[1]), log2_256(b[2])])
@@ -367,7 +399,8 @@ pub fn analyse(samples: &[i16]) -> Option<Analysis> {
 /// (from the song's project, in `data/songs.json`): only the first beat
 /// and whether the song is straight or in triplets are found (R6.4).
 pub fn analyse_with(samples: &[i16], bpm_milli: Option<i64>) -> Option<Analysis> {
-    let onsets = envelope(samples);
+    let energy = bands(samples);
+    let onsets = envelope_of(&energy);
     let length = samples.len() as i64 * US / RATE;
     let hop = hop_us();
     let min_lag = (60 * US / MAX_BPM) / hop;
@@ -376,6 +409,10 @@ pub fn analyse_with(samples: &[i16], bpm_milli: Option<i64>) -> Option<Analysis>
         return None;
     }
     let found = peaks(&onsets);
+    let accents: Vec<i64> = found
+        .iter()
+        .map(|p| accent(&energy, (p.0 * RATE / (HOP * US)) as usize))
+        .collect();
     let mut by_strength: Vec<i64> = found.iter().map(|p| p.1).collect();
     by_strength.sort_unstable();
     let cut = by_strength
@@ -453,21 +490,32 @@ pub fn analyse_with(samples: &[i16], bpm_milli: Option<i64>) -> Option<Analysis>
     }
     Some(Analysis {
         first_sound_us: first,
-        ..slots_for(&found, best.period, best.division, best.phase, length)
+        ..slots_for(&found, &accents, best.period, best.division, best.phase, length)
     })
 }
 
-/// Each grid line's strength: the strongest peak on it, or 0.
-fn slots_for(found: &[(i64, i64)], beat_us: i64, division: i64, phase: i64, length: i64) -> Analysis {
+/// Each grid line's strength and accent: the strongest of the peaks on it,
+/// or 0.
+fn slots_for(
+    found: &[(i64, i64)],
+    accents: &[i64],
+    beat_us: i64,
+    division: i64,
+    phase: i64,
+    length: i64,
+) -> Analysis {
     let first_beat_us = phase.rem_euclid(beat_us);
     let count = ((length - first_beat_us) * division / beat_us).max(0) as usize;
     let mut slots = vec![0u32; count];
-    for &(t, s) in found {
+    let mut stress = vec![0u32; count];
+    for (&(t, s), &acc) in found.iter().zip(accents) {
         let line = ((t - first_beat_us) * division + beat_us / 2).div_euclid(beat_us);
         let at = first_beat_us + line * beat_us / division;
         if line >= 0 && (line as usize) < count && (t - at).abs() <= ON_LINE_US {
             let v = &mut slots[line as usize];
             *v = (*v).max(s.min(u32::MAX as i64) as u32);
+            let w = &mut stress[line as usize];
+            *w = (*w).max(acc.min(u32::MAX as i64) as u32);
         }
     }
     Analysis {
@@ -476,6 +524,7 @@ fn slots_for(found: &[(i64, i64)], beat_us: i64, division: i64, phase: i64, leng
         length_us: length,
         division,
         slots,
+        accents: stress,
         first_sound_us: 0,
     }
 }
@@ -779,5 +828,50 @@ pub mod tests {
         assert_eq!(tempo_prior(375_000), 739);
         assert!(tempo_prior(750_000) < tempo_prior(500_000));
         assert!(tempo_prior(250_000) < tempo_prior(375_000));
+    }
+
+    #[test]
+    fn a_hit_that_lifts_the_whole_mix_is_stressed_more_than_one_that_does_not() {
+        // a low tone held under everything, a soft high tick on each half
+        // beat and a loud low thump on each beat: the ticks' own band rises
+        // as much as the thumps', but the whole mix barely gets louder at a
+        // tick (R7.6)
+        let n = (20 * RATE) as usize;
+        let mut s = vec![0i32; n];
+        for (k, v) in s.iter_mut().enumerate() {
+            *v += if (k / 40) % 2 == 0 { 6000 } else { -6000 };
+        }
+        let beat = (RATE / 2) as usize;
+        for b in 0..40 {
+            for k in 0..600usize {
+                if let Some(v) = s.get_mut(b * beat + k) {
+                    *v += if (k / 30) % 2 == 0 {
+                        20000 >> (k / 200)
+                    } else {
+                        -(20000 >> (k / 200))
+                    };
+                }
+                if let Some(v) = s.get_mut(b * beat + beat / 2 + k) {
+                    *v += if k % 2 == 0 {
+                        3000 >> (k / 100)
+                    } else {
+                        -(3000 >> (k / 100))
+                    };
+                }
+            }
+        }
+        let s: Vec<i16> = s.iter().map(|&v| v.clamp(-32768, 32767) as i16).collect();
+        let a = analyse(&s).expect("a beat");
+        let d = a.division as usize;
+        for b in 2..36usize {
+            let (on, off) = (b * d, b * d + d / 2);
+            assert!(a.slots[off] > 0, "beat {b}: the tick is heard");
+            assert!(
+                a.accents[on] > 2 * a.accents[off],
+                "beat {b}: thump {} against tick {}",
+                a.accents[on],
+                a.accents[off]
+            );
+        }
     }
 }

@@ -265,32 +265,32 @@
         {
           "difficulty": 0,
           "file": "charts/ballad-of-mr-nasty-easy.json",
-          "hash": "8d291e816dc521af",
-          "targets": 34
+          "hash": "cf1f75daea811513",
+          "targets": 71
         },
         {
           "difficulty": 1,
           "file": "charts/ballad-of-mr-nasty-normal.json",
-          "hash": "dee9970af3d6047c",
-          "targets": 62
+          "hash": "65e1c9a25f0f8b68",
+          "targets": 111
         },
         {
           "difficulty": 2,
           "file": "charts/ballad-of-mr-nasty-hard.json",
-          "hash": "87e1d372e463cb1b",
-          "targets": 74
+          "hash": "94bf5f98e4b28b1d",
+          "targets": 172
         },
         {
           "difficulty": 3,
           "file": "charts/ballad-of-mr-nasty-expert.json",
-          "hash": "a3e48ba589ef735f",
-          "targets": 125
+          "hash": "a799925c3c97e20f",
+          "targets": 203
         },
         {
           "difficulty": 4,
           "file": "charts/ballad-of-mr-nasty-master.json",
-          "hash": "84f4d1541f4cd678",
-          "targets": 187
+          "hash": "88c50c22b94226fc",
+          "targets": 373
         }
       ]
     },

@@ -6,7 +6,7 @@
     {"id": "lime-cruncher", "title": "Lime Cruncher", "by": "Emracool", "audio": "audio/lime-cruncher.mp3", "seed": 104},
     {"id": "monke-walkin", "title": "Monke Walkin'", "by": "Leefy5", "audio": "audio/monke-walkin.mp3", "seed": 105},
     {"id": "vamoss-den", "title": "Vamos's Den", "by": "Leefy5", "audio": "audio/vamoss-den.mp3", "seed": 106},
-    {"id": "ballad-of-mr-nasty", "title": "Ballad Of Mr Nasty", "by": "Emracool", "audio": "audio/ballad-of-mr-nasty.mp3", "seed": 107},
+    {"id": "ballad-of-mr-nasty", "title": "Ballad Of Mr Nasty", "by": "Emracool", "audio": "audio/ballad-of-mr-nasty.mp3", "seed": 107, "true_chart": true},
     {"id": "space-tsunami", "title": "Space Tsunami", "by": "Leefy5", "audio": "audio/space-tsunami.mp3", "seed": 108},
     {"id": "smiley", "title": ":)", "by": "boyetano", "audio": "audio/smiley.mp3", "seed": 109},
     {"id": "baped-out", "title": "Baped Out", "by": "Emracool", "audio": "audio/baped-out.mp3", "seed": 110},
