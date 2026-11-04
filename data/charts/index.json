@@ -1,0 +1,676 @@
+{
+  "songs": [
+    {
+      "id": "bunko-carnival",
+      "title": "bunko carnival",
+      "by": "boyetano",
+      "audio": "audio/bunko-carnival.mp3",
+      "audio_hash": "ed1d1db7f88e39cf",
+      "bpm_milli": 159976,
+      "length_us": 133536009,
+      "first_sound_us": 23764,
+      "charts": [
+        {
+          "difficulty": 0,
+          "file": "charts/bunko-carnival-easy.json",
+          "hash": "f6b4deebbb7f394b",
+          "targets": 262
+        },
+        {
+          "difficulty": 1,
+          "file": "charts/bunko-carnival-normal.json",
+          "hash": "d77f9c0ffadd5eea",
+          "targets": 331
+        },
+        {
+          "difficulty": 2,
+          "file": "charts/bunko-carnival-hard.json",
+          "hash": "068e542c02453f8d",
+          "targets": 555
+        },
+        {
+          "difficulty": 3,
+          "file": "charts/bunko-carnival-expert.json",
+          "hash": "1b8da9659a3d262c",
+          "targets": 709
+        },
+        {
+          "difficulty": 4,
+          "file": "charts/bunko-carnival-master.json",
+          "hash": "a24d87234669988f",
+          "targets": 818
+        }
+      ]
+    },
+    {
+      "id": "bonecereal",
+      "title": "BoneCereal",
+      "by": "Leefy5",
+      "audio": "audio/bonecereal.mp3",
+      "audio_hash": "1626775120c34846",
+      "bpm_milli": 171977,
+      "length_us": 165552018,
+      "first_sound_us": 25011,
+      "charts": [
+        {
+          "difficulty": 0,
+          "file": "charts/bonecereal-easy.json",
+          "hash": "a4239e9f7613025e",
+          "targets": 359
+        },
+        {
+          "difficulty": 1,
+          "file": "charts/bonecereal-normal.json",
+          "hash": "d09a829fa038799e",
+          "targets": 459
+        },
+        {
+          "difficulty": 2,
+          "file": "charts/bonecereal-hard.json",
+          "hash": "e92ef2d5355c1396",
+          "targets": 766
+        },
+        {
+          "difficulty": 3,
+          "file": "charts/bonecereal-expert.json",
+          "hash": "d5401b923565738d",
+          "targets": 1062
+        },
+        {
+          "difficulty": 4,
+          "file": "charts/bonecereal-master.json",
+          "hash": "1cb7b5000de974c9",
+          "targets": 1216
+        }
+      ]
+    },
+    {
+      "id": "grunge-dome",
+      "title": "Grunge Dome",
+      "by": "Emracool",
+      "audio": "audio/grunge-dome.mp3",
+      "audio_hash": "0bcf694bb6959dd1",
+      "bpm_milli": 119953,
+      "length_us": 43968027,
+      "first_sound_us": 27528,
+      "charts": [
+        {
+          "difficulty": 0,
+          "file": "charts/grunge-dome-easy.json",
+          "hash": "2345c3d903eb17cd",
+          "targets": 52
+        },
+        {
+          "difficulty": 1,
+          "file": "charts/grunge-dome-normal.json",
+          "hash": "ce1f5479d6c909ef",
+          "targets": 82
+        },
+        {
+          "difficulty": 2,
+          "file": "charts/grunge-dome-hard.json",
+          "hash": "f1042bd12e47562e",
+          "targets": 103
+        },
+        {
+          "difficulty": 3,
+          "file": "charts/grunge-dome-expert.json",
+          "hash": "2a2a68855861be6b",
+          "targets": 152
+        },
+        {
+          "difficulty": 4,
+          "file": "charts/grunge-dome-master.json",
+          "hash": "1df9768fbb01e1da",
+          "targets": 174
+        }
+      ]
+    },
+    {
+      "id": "lime-cruncher",
+      "title": "Lime Cruncher",
+      "by": "Emracool",
+      "audio": "audio/lime-cruncher.mp3",
+      "audio_hash": "b7175913858068ce",
+      "bpm_milli": 119972,
+      "length_us": 84000000,
+      "first_sound_us": 25374,
+      "charts": [
+        {
+          "difficulty": 0,
+          "file": "charts/lime-cruncher-easy.json",
+          "hash": "f27692540bcb37ad",
+          "targets": 105
+        },
+        {
+          "difficulty": 1,
+          "file": "charts/lime-cruncher-normal.json",
+          "hash": "632b0f11c61af4aa",
+          "targets": 132
+        },
+        {
+          "difficulty": 2,
+          "file": "charts/lime-cruncher-hard.json",
+          "hash": "137118b2dcf30fc3",
+          "targets": 272
+        },
+        {
+          "difficulty": 3,
+          "file": "charts/lime-cruncher-expert.json",
+          "hash": "76e254781d1e7619",
+          "targets": 414
+        },
+        {
+          "difficulty": 4,
+          "file": "charts/lime-cruncher-master.json",
+          "hash": "c076a6e3ec189885",
+          "targets": 462
+        }
+      ]
+    },
+    {
+      "id": "monke-walkin",
+      "title": "Monke Walkin'",
+      "by": "Leefy5",
+      "audio": "audio/monke-walkin.mp3",
+      "audio_hash": "f3745978314cf6ca",
+      "bpm_milli": 119964,
+      "length_us": 121992018,
+      "first_sound_us": 39546,
+      "charts": [
+        {
+          "difficulty": 0,
+          "file": "charts/monke-walkin-easy.json",
+          "hash": "5a6616c004c5831f",
+          "targets": 203
+        },
+        {
+          "difficulty": 1,
+          "file": "charts/monke-walkin-normal.json",
+          "hash": "bb0e87b675d632ff",
+          "targets": 369
+        },
+        {
+          "difficulty": 2,
+          "file": "charts/monke-walkin-hard.json",
+          "hash": "33d869e5b25ac855",
+          "targets": 633
+        },
+        {
+          "difficulty": 3,
+          "file": "charts/monke-walkin-expert.json",
+          "hash": "174f629746533434",
+          "targets": 720
+        },
+        {
+          "difficulty": 4,
+          "file": "charts/monke-walkin-master.json",
+          "hash": "5263fcf166dd5c20",
+          "targets": 792
+        }
+      ]
+    },
+    {
+      "id": "vamoss-den",
+      "title": "Vamos's Den",
+      "by": "Leefy5",
+      "audio": "audio/vamoss-den.mp3",
+      "audio_hash": "91b22409490a7721",
+      "bpm_milli": 124637,
+      "length_us": 94968027,
+      "first_sound_us": 26281,
+      "charts": [
+        {
+          "difficulty": 0,
+          "file": "charts/vamoss-den-easy.json",
+          "hash": "ee80503fd0970d39",
+          "targets": 162
+        },
+        {
+          "difficulty": 1,
+          "file": "charts/vamoss-den-normal.json",
+          "hash": "6c2a0a5fa75ebe75",
+          "targets": 194
+        },
+        {
+          "difficulty": 2,
+          "file": "charts/vamoss-den-hard.json",
+          "hash": "ccfe9e887cf203dc",
+          "targets": 429
+        },
+        {
+          "difficulty": 3,
+          "file": "charts/vamoss-den-expert.json",
+          "hash": "ecc2d284c104c149",
+          "targets": 470
+        },
+        {
+          "difficulty": 4,
+          "file": "charts/vamoss-den-master.json",
+          "hash": "ecaa30e0035c2bca",
+          "targets": 772
+        }
+      ]
+    },
+    {
+      "id": "ballad-of-mr-nasty",
+      "title": "Ballad Of Mr Nasty",
+      "by": "Emracool",
+      "audio": "audio/ballad-of-mr-nasty.mp3",
+      "audio_hash": "bc2e373ded2a80c0",
+      "bpm_milli": 119943,
+      "length_us": 55536009,
+      "first_sound_us": 25238,
+      "charts": [
+        {
+          "difficulty": 0,
+          "file": "charts/ballad-of-mr-nasty-easy.json",
+          "hash": "a86788464faf776d",
+          "targets": 88
+        },
+        {
+          "difficulty": 1,
+          "file": "charts/ballad-of-mr-nasty-normal.json",
+          "hash": "131412c3c0dfb45e",
+          "targets": 117
+        },
+        {
+          "difficulty": 2,
+          "file": "charts/ballad-of-mr-nasty-hard.json",
+          "hash": "c2cb0a49e19d4151",
+          "targets": 182
+        },
+        {
+          "difficulty": 3,
+          "file": "charts/ballad-of-mr-nasty-expert.json",
+          "hash": "34d6308be31e9f09",
+          "targets": 210
+        },
+        {
+          "difficulty": 4,
+          "file": "charts/ballad-of-mr-nasty-master.json",
+          "hash": "88c50c22b94226fc",
+          "targets": 373
+        }
+      ]
+    },
+    {
+      "id": "space-tsunami",
+      "title": "Space Tsunami",
+      "by": "Leefy5",
+      "audio": "audio/space-tsunami.mp3",
+      "audio_hash": "48582ee3fc9a9a9b",
+      "bpm_milli": 119977,
+      "length_us": 83976009,
+      "first_sound_us": 39569,
+      "charts": [
+        {
+          "difficulty": 0,
+          "file": "charts/space-tsunami-easy.json",
+          "hash": "98831f2db015f750",
+          "targets": 94
+        },
+        {
+          "difficulty": 1,
+          "file": "charts/space-tsunami-normal.json",
+          "hash": "5cfa85c7cb25377f",
+          "targets": 140
+        },
+        {
+          "difficulty": 2,
+          "file": "charts/space-tsunami-hard.json",
+          "hash": "6c8c2f0fa96c6746",
+          "targets": 179
+        },
+        {
+          "difficulty": 3,
+          "file": "charts/space-tsunami-expert.json",
+          "hash": "949055b1eb109c58",
+          "targets": 264
+        },
+        {
+          "difficulty": 4,
+          "file": "charts/space-tsunami-master.json",
+          "hash": "560f06d235880bfb",
+          "targets": 479
+        }
+      ]
+    },
+    {
+      "id": "smiley",
+      "title": ":)",
+      "by": "boyetano",
+      "audio": "audio/smiley.mp3",
+      "audio_hash": "f6e1f26d04d6213e",
+      "bpm_milli": 119970,
+      "length_us": 121992018,
+      "first_sound_us": 405056,
+      "charts": [
+        {
+          "difficulty": 0,
+          "file": "charts/smiley-easy.json",
+          "hash": "5215faf20de5f3c9",
+          "targets": 187
+        },
+        {
+          "difficulty": 1,
+          "file": "charts/smiley-normal.json",
+          "hash": "bc10ffb22ddbe0d0",
+          "targets": 322
+        },
+        {
+          "difficulty": 2,
+          "file": "charts/smiley-hard.json",
+          "hash": "26a35aecc93c0434",
+          "targets": 577
+        },
+        {
+          "difficulty": 3,
+          "file": "charts/smiley-expert.json",
+          "hash": "2212939ee52eca14",
+          "targets": 661
+        },
+        {
+          "difficulty": 4,
+          "file": "charts/smiley-master.json",
+          "hash": "043cbfc461829aee",
+          "targets": 744
+        }
+      ]
+    },
+    {
+      "id": "baped-out",
+      "title": "Baped Out",
+      "by": "Emracool",
+      "audio": "audio/baped-out.mp3",
+      "audio_hash": "1dafe8dbbb1c3986",
+      "bpm_milli": 119981,
+      "length_us": 123984036,
+      "first_sound_us": 36462,
+      "charts": [
+        {
+          "difficulty": 0,
+          "file": "charts/baped-out-easy.json",
+          "hash": "f5b37ebf5555c4d6",
+          "targets": 235
+        },
+        {
+          "difficulty": 1,
+          "file": "charts/baped-out-normal.json",
+          "hash": "4b7bca3d372a7670",
+          "targets": 393
+        },
+        {
+          "difficulty": 2,
+          "file": "charts/baped-out-hard.json",
+          "hash": "c1347b1018ad48fc",
+          "targets": 608
+        },
+        {
+          "difficulty": 3,
+          "file": "charts/baped-out-expert.json",
+          "hash": "db7e22b07cef868f",
+          "targets": 700
+        },
+        {
+          "difficulty": 4,
+          "file": "charts/baped-out-master.json",
+          "hash": "aa77d870f6a7c35f",
+          "targets": 777
+        }
+      ]
+    },
+    {
+      "id": "sunrise-on-the-ganges",
+      "title": "Sunrise on the Ganges",
+      "by": "BOSU",
+      "audio": "audio/sunrise-on-the-ganges.mp3",
+      "audio_hash": "069e3423b5e84443",
+      "bpm_milli": 100000,
+      "length_us": 70000000,
+      "first_sound_us": 0,
+      "charts": [
+        {
+          "difficulty": 0,
+          "file": "charts/sunrise-on-the-ganges-easy.json",
+          "hash": "dc8fcf2e38bb390a",
+          "targets": 113
+        },
+        {
+          "difficulty": 1,
+          "file": "charts/sunrise-on-the-ganges-normal.json",
+          "hash": "28b373fc6dda34fe",
+          "targets": 142
+        },
+        {
+          "difficulty": 2,
+          "file": "charts/sunrise-on-the-ganges-hard.json",
+          "hash": "0d4f6c02160093b2",
+          "targets": 222
+        },
+        {
+          "difficulty": 3,
+          "file": "charts/sunrise-on-the-ganges-expert.json",
+          "hash": "4aa3c46ec6ab6795",
+          "targets": 279
+        },
+        {
+          "difficulty": 4,
+          "file": "charts/sunrise-on-the-ganges-master.json",
+          "hash": "73ffa891e8740079",
+          "targets": 326
+        }
+      ]
+    },
+    {
+      "id": "3000-jelly",
+      "title": "3000 Jelly",
+      "by": "BOSU",
+      "audio": "audio/3000-jelly.mp3",
+      "audio_hash": "172bb7060477988a",
+      "bpm_milli": 118000,
+      "length_us": 75000000,
+      "first_sound_us": 0,
+      "charts": [
+        {
+          "difficulty": 0,
+          "file": "charts/3000-jelly-easy.json",
+          "hash": "58562026df3e0b87",
+          "targets": 143
+        },
+        {
+          "difficulty": 1,
+          "file": "charts/3000-jelly-normal.json",
+          "hash": "7dfc21a2e9d9fc93",
+          "targets": 168
+        },
+        {
+          "difficulty": 2,
+          "file": "charts/3000-jelly-hard.json",
+          "hash": "24c3cc48da1cf7c7",
+          "targets": 282
+        },
+        {
+          "difficulty": 3,
+          "file": "charts/3000-jelly-expert.json",
+          "hash": "32b6653b04a46bd1",
+          "targets": 374
+        },
+        {
+          "difficulty": 4,
+          "file": "charts/3000-jelly-master.json",
+          "hash": "f7bf9e8ae89c0320",
+          "targets": 448
+        }
+      ]
+    },
+    {
+      "id": "disco-satellite",
+      "title": "Disco Satellite",
+      "by": "BOSU",
+      "audio": "audio/disco-satellite.mp3",
+      "audio_hash": "80dabdf438bfe140",
+      "bpm_milli": 132000,
+      "length_us": 80000000,
+      "first_sound_us": 22,
+      "charts": [
+        {
+          "difficulty": 0,
+          "file": "charts/disco-satellite-easy.json",
+          "hash": "bb53a6d31ccbd12f",
+          "targets": 170
+        },
+        {
+          "difficulty": 1,
+          "file": "charts/disco-satellite-normal.json",
+          "hash": "2cd695955957ab32",
+          "targets": 194
+        },
+        {
+          "difficulty": 2,
+          "file": "charts/disco-satellite-hard.json",
+          "hash": "5f6bb43f91b87db8",
+          "targets": 327
+        },
+        {
+          "difficulty": 3,
+          "file": "charts/disco-satellite-expert.json",
+          "hash": "bef7577bc5a806ca",
+          "targets": 448
+        },
+        {
+          "difficulty": 4,
+          "file": "charts/disco-satellite-master.json",
+          "hash": "f058f3038d505801",
+          "targets": 511
+        }
+      ]
+    },
+    {
+      "id": "velvet-moped",
+      "title": "Velvet Moped",
+      "by": "BOSU",
+      "audio": "audio/velvet-moped.mp3",
+      "audio_hash": "c5bf75f13ac62809",
+      "bpm_milli": 150000,
+      "length_us": 80000000,
+      "first_sound_us": 0,
+      "charts": [
+        {
+          "difficulty": 0,
+          "file": "charts/velvet-moped-easy.json",
+          "hash": "036ad169ae792a52",
+          "targets": 194
+        },
+        {
+          "difficulty": 1,
+          "file": "charts/velvet-moped-normal.json",
+          "hash": "d7c5e8257bfba5f1",
+          "targets": 213
+        },
+        {
+          "difficulty": 2,
+          "file": "charts/velvet-moped-hard.json",
+          "hash": "ca9dd7369e16dc38",
+          "targets": 374
+        },
+        {
+          "difficulty": 3,
+          "file": "charts/velvet-moped-expert.json",
+          "hash": "7b58a631e5a2c295",
+          "targets": 522
+        },
+        {
+          "difficulty": 4,
+          "file": "charts/velvet-moped-master.json",
+          "hash": "89c13f3c0de58a48",
+          "targets": 595
+        }
+      ]
+    },
+    {
+      "id": "neon-cassette-shuffle",
+      "title": "Neon Cassette Shuffle",
+      "by": "BOSU",
+      "audio": "audio/neon-cassette-shuffle.mp3",
+      "audio_hash": "4bb95956a9a789d3",
+      "bpm_milli": 172000,
+      "length_us": 85000000,
+      "first_sound_us": 0,
+      "charts": [
+        {
+          "difficulty": 0,
+          "file": "charts/neon-cassette-shuffle-easy.json",
+          "hash": "5b226a276c8642f6",
+          "targets": 237
+        },
+        {
+          "difficulty": 1,
+          "file": "charts/neon-cassette-shuffle-normal.json",
+          "hash": "8f5c36d928dde570",
+          "targets": 253
+        },
+        {
+          "difficulty": 2,
+          "file": "charts/neon-cassette-shuffle-hard.json",
+          "hash": "9d0874fa4495e209",
+          "targets": 423
+        },
+        {
+          "difficulty": 3,
+          "file": "charts/neon-cassette-shuffle-expert.json",
+          "hash": "674a349147eaf3de",
+          "targets": 569
+        },
+        {
+          "difficulty": 4,
+          "file": "charts/neon-cassette-shuffle-master.json",
+          "hash": "b517df0712d01a9b",
+          "targets": 631
+        }
+      ]
+    },
+    {
+      "id": "jugglers-of-vienna",
+      "title": "Jugglers of Vienna",
+      "by": "BOSU",
+      "audio": "audio/jugglers-of-vienna.mp3",
+      "audio_hash": "20494e074330d1d0",
+      "bpm_milli": 160000,
+      "length_us": 121500589,
+      "first_sound_us": 500022,
+      "charts": [
+        {
+          "difficulty": 0,
+          "file": "charts/jugglers-of-vienna-easy.json",
+          "hash": "c5375d2f8d8b3074",
+          "targets": 281
+        },
+        {
+          "difficulty": 1,
+          "file": "charts/jugglers-of-vienna-normal.json",
+          "hash": "45057e56c1c100df",
+          "targets": 314
+        },
+        {
+          "difficulty": 2,
+          "file": "charts/jugglers-of-vienna-hard.json",
+          "hash": "e9bc1e3899c21482",
+          "targets": 501
+        },
+        {
+          "difficulty": 3,
+          "file": "charts/jugglers-of-vienna-expert.json",
+          "hash": "434b70fc2a61971c",
+          "targets": 713
+        },
+        {
+          "difficulty": 4,
+          "file": "charts/jugglers-of-vienna-master.json",
+          "hash": "0d03bca0b444621b",
+          "targets": 788
+        }
+      ]
+    }
+  ]
+}

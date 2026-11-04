@@ -1,0 +1,168 @@
+/* Colours by role. The canvas reads --<role> for each role the core's
+   draw list names (crates/core/src/draw.rs, PALETTE). */
+/* Colours by role, in Lowballer's palette (styles/lowballer). The canvas
+   reads --<role> for each role the core's draw list names
+   (crates/core/src/draw.rs, PALETTE). */
+:root {
+  --paper: #fff4e0;
+  --ink: #3b2340;
+  --muted: #6e5a72;
+  --accent: #e47a7e;
+  --field: #f6e7c4;
+  --perfect: #4f8f5c;
+  --great: #3f8a84;
+  --good: #c48420;
+  --miss: #c85f65;
+  --hold: #f2a7b5;
+  --sky: #efc46a;
+  --butter: #f5da92;
+  --plum: #8a5a9e;
+  --sage: #8dbb7e;
+  --gold: #f2b53a;
+  --teal: #5fa8a0;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #2a1b30;
+    --ink: #f6e7c4;
+    --muted: #c8b3cf;
+    --accent: #f08a8e;
+    --field: #35233c;
+    --perfect: #8dcf9a;
+    --great: #7fcfc6;
+    --good: #f2c060;
+    --miss: #f49aa0;
+    --hold: #a77bb8;
+    --butter: #4a3357;
+  }
+}
+* { box-sizing: border-box; }
+/* A display rule elsewhere must not show what the page hid. */
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+html { touch-action: manipulation; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 1rem/1.5 ui-rounded, "SF Pro Rounded", "Nunito", system-ui, sans-serif;
+}
+main { max-width: 46rem; margin: 0 auto; padding: 2rem 1rem; position: relative; }
+h1 { font-size: 2rem; margin: 0 0 0.5rem; letter-spacing: 0.02em; }
+h2 { font-size: 1.2rem; margin: 1rem 0 0.5rem; }
+#message:not(:empty) { color: var(--miss); }
+section { margin: 0 0 1rem; }
+.actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+button {
+  font: inherit;
+  color: var(--ink);
+  background: var(--butter);
+  border: 2.5px solid var(--ink);
+  border-radius: 0.8rem;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  text-align: left;
+  font-weight: 600;
+}
+button:hover:not(:disabled) { background: var(--sky); }
+button:focus-visible { outline: 3px solid var(--plum); outline-offset: 2px; }
+h1, h2 { font-weight: 800; letter-spacing: 0.01em; }
+button small { display: block; color: var(--muted); font-size: 0.8rem; }
+button[aria-pressed="true"] { background: var(--plum); color: #fff4e0; }
+button[aria-pressed="true"] small { color: #fff4e0; }
+button:disabled { opacity: 0.5; cursor: default; }
+#songs .actions, #difficulty .actions { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); }
+.field label { display: flex; gap: 0.5rem; align-items: center; }
+.field input { font: inherit; padding: 0.3rem 0.5rem; border: 2px solid var(--ink); border-radius: 0.4rem; background: var(--paper); color: var(--ink); }
+.field p { color: var(--muted); font-size: 0.9rem; }
+[data-term] { text-decoration: underline dotted; cursor: help; }
+
+/* The playfield: hidden on menu screens, filling the window at 16:9 when
+   the core says the canvas shows. */
+#field {
+  display: none;
+  touch-action: none;
+  cursor: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+body[data-canvas="true"] { overflow: hidden; }
+body[data-canvas="true"] #field {
+  display: block;
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(100vw, calc(100vh * 16 / 9));
+  height: min(100vh, calc(100vw * 9 / 16));
+}
+body[data-canvas="true"] h1 { display: none; }
+body[data-screen="play"] main { pointer-events: none; }
+body[data-screen="play"][data-paused="true"] main {
+  pointer-events: auto;
+  position: fixed;
+  inset: 0;
+  max-width: none;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--paper) 80%, transparent);
+}
+body[data-screen="calibrate"] main {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-width: 40rem;
+  background: var(--paper);
+  border-top: 2px solid var(--ink);
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+
+/* The landing page: the picture full width, the title, tagline, credits
+   and buttons over its calm sky; how to play below. Only the title screen
+   shows the picture. */
+#hero { display: none; }
+body[data-screen="title"] #hero {
+  display: block;
+  max-width: 1280px;
+  margin: 0 auto;
+  border-bottom: 3px solid #3b2340;
+}
+#hero img { display: block; width: 100%; height: auto; }
+body[data-screen="title"] h1 { display: none; }
+body[data-screen="title"] { position: relative; }
+body[data-screen="title"] main { position: static; padding-top: 1rem; }
+body[data-screen="title"] #intro {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 1280px;
+  padding: clamp(0.8rem, 2.4vw, 2rem) clamp(1rem, 3vw, 2.6rem);
+  color: #3b2340;
+}
+body[data-screen="title"] #intro > * { max-width: min(33vw, 26rem); }
+body[data-screen="title"] #intro h2 {
+  font-size: clamp(1.6rem, 5vw, 4.2rem);
+  line-height: 0.95;
+  margin: 0 0 0.5rem;
+  color: #3b2340;
+}
+body[data-screen="title"] #intro p { font-size: clamp(0.78rem, 1.2vw, 1.05rem); margin: 0 0 0.5rem; font-weight: 700; }
+body[data-screen="title"] #intro .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.3rem; }
+body[data-screen="title"] #intro button { text-align: center; color: #3b2340; padding: 0.45rem 0.6rem; border-color: #3b2340; }
+body[data-screen="title"] #intro button[data-value="select"] { background: #e47a7e; color: #fff4e0; }
+body[data-screen="title"] #intro button[data-action="online.host"] { background: #8dbb7e; }
+body[data-screen="title"] #intro button[data-value="join"] { background: #5fa8a0; color: #fff4e0; }
+body[data-screen="title"] #intro button[data-value="settings"] { background: #f5da92; }
+body[data-screen="title"] #how { max-width: 40rem; }
+/* A narrow screen: the words go under the picture. */
+@media (max-width: 760px) {
+  body[data-screen="title"] #intro { position: static; transform: none; padding: 0; color: var(--ink); }
+  body[data-screen="title"] #intro > * { max-width: none; }
+  body[data-screen="title"] #intro h2 { color: var(--ink); font-size: 2.4rem; }
+  body[data-screen="title"] #intro p { font-size: 1rem; }
+}
