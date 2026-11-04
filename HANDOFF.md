@@ -86,6 +86,8 @@ The last lines of `./scripts/check.sh` and `./scripts/count-tests.sh`, with the 
 
 2026-11-04, round 8 (T14, T15), 4308304: `./scripts/check.sh` ended `BROWSER CHECK PASSED in chromium, firefox, webkit, webkit-iphone, webkit-ipad` and `BUILDER CHECK PASSED`; `python3 scripts/break_tests.py`: 91 of 91 breaks caught.
 
+2026-11-04, round 8 (T16), 7209779: `./scripts/check.sh` ended `BROWSER CHECK PASSED in chromium, firefox, webkit, webkit-iphone, webkit-ipad` and `BUILDER CHECK PASSED`; `python3 scripts/break_tests.py`: 94 of 94 breaks caught.
+
 ## The next action
 
 One action.
@@ -102,3 +104,4 @@ One action.
 | 2026-11-03 | 639beb1 | https://sgilson7.github.io/BOSU/ | check.sh passed (publish.sh ran it); the new and repaired break rows caught; live browser check passed in all five profiles. Ballad Of Mr Nasty from its true chart (T12, R7.6); the other songs unchanged. |
 | 2026-11-03 | eb95dbb | https://sgilson7.github.io/BOSU/ | check.sh passed (publish.sh ran it); the true-chart and groove break rows caught; live browser check passed in all five profiles. Ballad's Easy to Hard follow the groove (T13, R7.7); the other songs unchanged. |
 | 2026-11-04 | 4308304 | https://sgilson7.github.io/BOSU/ | check.sh passed (publish.sh ran it); break_tests 91 of 91; live browser check passed in all five profiles. Every song by its groove (T14, R7.8); composed songs from a score (R8.1, R8.2); Jugglers of Vienna not listed until its render (R8.3). |
+| 2026-11-04 | 7209779 | https://sgilson7.github.io/BOSU/ | check.sh passed (publish.sh ran it); break_tests 94 of 94; live browser check passed in all five profiles, sixteen songs in each. Jugglers of Vienna rendered, listed and charted from its score (T15, T16, R8.3, R8.4). |
