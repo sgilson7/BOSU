@@ -18,7 +18,7 @@ def run(page, check, engine):
 
     page.click("button[data-value='select']")
     page.wait_for_selector("body[data-screen='select']")
-    check(page.locator("button[data-action='song.pick']").count() == 15, "fifteen songs to choose from: the album's ten and five of our own")
+    check(page.locator("button[data-action='song.pick']").count() == 16, "sixteen songs to choose from: the album's ten and six of our own")
     check(page.locator("button[data-action='difficulty.pick']").count() == 5, "five difficulties to choose from")
     names = [page.inner_text(f"button[data-value='{k}'] > span") for k in ["easy", "normal", "hard", "expert", "master"]]
     check(names == [STRINGS[f"difficulty.{k}"] for k in ["easy", "normal", "hard", "expert", "master"]], f"the difficulty names {names}")

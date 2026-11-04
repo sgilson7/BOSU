@@ -14,6 +14,11 @@
 #include <stdint.h>
 #include "mk_tables.h"
 #define RING_PUBLISH() ((void)0)
+#ifdef __APPLE__
+/* the firmware puts some buffers in its ".pool" section; Mach-O names sections differently, and on a host where
+ * they sit does not matter */
+#define section(name) aligned(4)
+#endif
 #include "firmware/src/synth.h"
 #include "firmware/src/orbit.c"
 #include "firmware/src/engine.c"
@@ -152,7 +157,8 @@ static void wav(const char *path)
 int main(int argc, char **argv)
 {
     FILE *in;
-    char line[256], name[64];
+    char line[256], name[64], next_name[64];
+    int next_preset, next_pan;
     static ev_t ev[200000];
     uint32_t n = 0, bpm = 120;
     int preset = 0, pan = 0, have = 0;
@@ -174,8 +180,10 @@ int main(int argc, char **argv)
         if (sscanf(line, "length %u", &len) == 1) {
             frames = len / CTL * CTL + CTL;
             mixl = calloc(frames, sizeof *mixl), mixr = calloc(frames, sizeof *mixr);
-        } else if (sscanf(line, "part %63s %d %d %d", name, &preset, &g, &pan) == 4) {
-            FLUSH();
+        } else if (sscanf(line, "part %63s %d %d %d", next_name, &next_preset, &g, &next_pan) == 4) {
+            FLUSH();   /* the part before, with its own settings */
+            strcpy(name, next_name);
+            preset = next_preset, pan = next_pan;
             have = 1, gain = g / 1000.0;
         } else if (sscanf(line, "tempo %u", &bpm) == 1) {
         } else if (sscanf(line, "on %u %u %u", &at, &note, &vel) == 3) {

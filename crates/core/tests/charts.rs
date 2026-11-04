@@ -38,12 +38,13 @@ fn songs() -> Vec<(catalog::Song, Analysis, Vec<Chart>)> {
 }
 
 #[test]
-fn the_album_s_ten_tracks_and_five_of_our_own_have_five_charts_each() {
+fn the_album_s_ten_tracks_and_six_of_our_own_have_five_charts_each() {
+    // our six: five made with ffmpeg, and Jugglers of Vienna, composed (R8.1)
     let all = songs();
     let album = all.iter().filter(|(s, _, _)| s.by != "BOSU").count();
-    assert_eq!((album, all.len()), (10, 15));
+    assert_eq!((album, all.len()), (10, 16));
     let index = catalog::parse_index(&read("data/charts/index.json")).expect("index");
-    assert_eq!(index.songs.len(), 15);
+    assert_eq!(index.songs.len(), 16);
     for s in &index.songs {
         assert_eq!(s.charts.len(), 5, "{}", s.id);
     }

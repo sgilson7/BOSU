@@ -15,7 +15,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::beats::Analysis;
+use crate::beats::{Analysis, NOT_FEATURED};
 
 /// Grid lines a beat a score may use, the fewest first: straight halves,
 /// triplets, straight quarters, halves and triplets at once.
@@ -43,6 +43,10 @@ pub struct Part {
     pub clef: String,
     /// The part whose long notes may become holds.
     pub lead: bool,
+    /// The easiest difficulty that plays every note of this part the
+    /// difficulty's gap allows (0 Easy .. 3 Expert), if any (R8.4).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub play_from: Option<u8>,
     /// Each note: start tick, length in ticks, MIDI pitch, velocity.
     pub notes: Vec<[i64; 4]>,
 }
@@ -134,6 +138,7 @@ impl Score {
         let mut slots = vec![0u32; count];
         let mut accents = vec![0u32; count];
         let mut sustains = vec![0u32; count];
+        let mut play_from = vec![NOT_FEATURED; count];
         for part in &self.parts {
             for n in &part.notes {
                 let w = self.weight(part, n[2]);
@@ -144,6 +149,9 @@ impl Score {
                 let v = (n[3] as u32).saturating_mul(w);
                 slots[line] = slots[line].max(v);
                 accents[line] = accents[line].saturating_add(v);
+                if let Some(k) = part.play_from {
+                    play_from[line] = play_from[line].min(k);
+                }
                 if part.lead {
                     sustains[line] = sustains[line].max((n[1] / tick_lines) as u32);
                 }
@@ -159,6 +167,7 @@ impl Score {
             first_sound_us: 0,
             bar_beats: self.bar_beats,
             sustains,
+            play_from,
         })
     }
 }
@@ -265,5 +274,22 @@ mod tests {
         // 26 ms early, 26 ms late, and on the note that does not count
         assert_eq!(agreement(&a, &[(474_000, 9), (526_000, 9), (750_000, 9)]), 0);
         assert_eq!(agreement(&a, &[]), 0);
+    }
+
+    #[test]
+    fn a_score_part_names_the_level_it_is_played_from() {
+        let json = score("[0,36,74,100],[6,6,76,80]", "[0,6,36,90],[12,6,36,90]").replacen(
+            r#""lead":true"#,
+            r#""lead":true,"play_from":1"#,
+            1,
+        );
+        let a = Score::parse(&json)
+            .expect("parses")
+            .analysis(3_000_000)
+            .expect("on a grid");
+        // the lead's notes on lines 0 and 1 (a half-beat grid); the drums
+        // name no level
+        assert_eq!(a.division, 2);
+        assert_eq!(&a.play_from[..3], &[1, 1, NOT_FEATURED]);
     }
 }

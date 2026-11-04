@@ -70,7 +70,6 @@ Every `SECOND-ORDER.md` row with status *person*, by number, with what the perso
 - R3.1: the five audio files: downloads turned on for each track, or the files in BrowserOSU/songs/ (BO-Q18).
 - R3.11: whether Easy is busy enough, after playing it.
 - R6.1: the names of our five extra songs, if you want others.
-- R8.3: run `tools/compose/make.sh jugglers-of-vienna` once (it builds the Vector37 engine, which the agent was not allowed to run), or allow the agent to; then Jugglers of Vienna is listed and charted.
 - R7.5: Grunge Dome and Space Tsunami: play them; if the beat is off, give their tempo from Ableton in `data/songs.json` (`bpm_milli`). Say whether Vamos's Den feels like 124.6 with triplets or 187 straight.
 - R6.5: older commits in the public repository still hold the friend's SoundCloud handle; history can be rewritten if you want it gone.
 - R4.4: a lobby with a friend on another network, by hand.

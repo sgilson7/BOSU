@@ -18,6 +18,8 @@ cc -O2 -w -Itarget/compose -I"$V37" -o target/compose/render tools/compose/rende
 python3 "tools/compose/$(echo "$ID" | tr - _).py"
 python3 tools/compose/score.py "data/scores/$ID.json" "target/compose/$ID.events"
 target/compose/render "target/compose/$ID.events" "target/compose/$ID.wav"
-ffmpeg -loglevel error -y -i "target/compose/$ID.wav" -map_metadata -1 -codec:a libmp3lame -q:a 2 "web/audio/$ID.mp3"
+# up to the album's loudness (about -16 LUFS); the limiter's delay compensated, so no note moves
+ffmpeg -loglevel error -y -i "target/compose/$ID.wav" -af "volume=4dB,alimiter=limit=0.89:attack=2:latency=1" \
+    -map_metadata -1 -codec:a libmp3lame -q:a 2 "web/audio/$ID.mp3"
 python3 tools/compose/score_tikz.py "data/scores/$ID.json" "docs/scores/$ID"
 echo "made web/audio/$ID.mp3 and docs/scores/$ID.pdf"

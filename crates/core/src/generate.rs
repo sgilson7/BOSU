@@ -176,18 +176,55 @@ fn from_true_chart(a: &Analysis, difficulty: usize) -> Vec<usize> {
         DIFFICULTIES[k].min_gap_us.min(a.beat_us / divisor)
     };
     let levels = groove(a, &hits, [gap(0), gap(1), gap(2)]);
-    match levels.get(difficulty) {
-        Some(level) => level.clone(),
-        None => thin(
-            a,
-            &hits,
-            &DIFFICULTIES[difficulty],
-            100,
-            true,
-            gap(difficulty),
-            &levels[GROOVE_LEVELS - 1],
-        ),
+    // a score's featured parts join from the level they name, before the
+    // groove fills in around them; each level starts from the one below
+    // (R8.4)
+    let mut below: Vec<usize> = Vec::new();
+    for (k, level) in levels.iter().enumerate().take(difficulty + 1) {
+        below = featured(a, &hits, &below, k, gap(k), level);
     }
+    if difficulty < GROOVE_LEVELS {
+        return below;
+    }
+    let must = featured(a, &hits, &below, difficulty, gap(difficulty), &[]);
+    thin(
+        a,
+        &hits,
+        &DIFFICULTIES[difficulty],
+        100,
+        true,
+        gap(difficulty),
+        &must,
+    )
+}
+
+/// Level `k` of a chart from the true chart: all of `below`, then each hit
+/// a score part asks level `k` to play, then the `groove`'s places, each
+/// only when `gap` from every target already chosen.
+fn featured(
+    a: &Analysis,
+    hits: &[usize],
+    below: &[usize],
+    k: usize,
+    gap: i64,
+    groove: &[usize],
+) -> Vec<usize> {
+    let mut taken: std::collections::BTreeSet<i64> = below.iter().map(|&q| a.slot_time(q)).collect();
+    let mut out: Vec<usize> = below.to_vec();
+    let asked = hits
+        .iter()
+        .copied()
+        .filter(|&q| a.play_from.get(q).is_some_and(|&f| f as usize <= k));
+    for q in asked.chain(groove.iter().copied()) {
+        let t = a.slot_time(q);
+        let clear = taken.range(t - gap + 1..t + gap).next().is_none();
+        if clear {
+            taken.insert(t);
+            out.push(q);
+        }
+    }
+    out.sort();
+    out
 }
 
 /// How stressed the hit on line `q` is: its accent (or, in an analysis
@@ -555,7 +592,7 @@ pub fn load(c: &Chart) -> (i64, i64) {
 pub mod tests {
     use super::*;
     use crate::beats::tests::{clicks_at, song};
-    use crate::beats::{analyse, US};
+    use crate::beats::{analyse, NOT_FEATURED, US};
     use crate::play::{perfect_inputs, replay, Judgement};
 
     /// A song with beats, offbeats and sixteenths at three strengths.
@@ -1085,6 +1122,7 @@ pub mod tests {
             first_sound_us: 0,
             bar_beats: 3,
             sustains: Vec::new(),
+            play_from: Vec::new(),
         }
     }
 
@@ -1141,5 +1179,31 @@ pub mod tests {
             }
         }
         assert!(held >= 5, "{held} held");
+    }
+
+    #[test]
+    fn a_scores_featured_part_is_played_from_the_level_it_names() {
+        // a part on the half beat after each downbeat, barely stressed, so
+        // the groove alone would leave it, asks to be played from Normal:
+        // every one of its notes is on Normal, Hard and Expert, none on Easy
+        // (R8.4)
+        let mut a = waltz();
+        a.play_from = (0..160)
+            .map(|q| if q % 6 == 1 { 1 } else { NOT_FEATURED })
+            .collect();
+        let part = times_where(&a, |q| q % 6 == 1);
+        assert!(part.len() > 20);
+        let groove_only = chart_with("test", &waltz(), 1, 1, true);
+        assert!(part.iter().all(|t| groove_only.targets.iter().all(|x| x.t != *t)));
+        for (difficulty, want) in [(0, false), (1, true), (2, true), (3, true)] {
+            let c = chart_with("test", &a, difficulty, 1, true);
+            for t in &part {
+                assert_eq!(
+                    c.targets.iter().any(|x| x.t == *t),
+                    want,
+                    "difficulty {difficulty}, {t}"
+                );
+            }
+        }
     }
 }

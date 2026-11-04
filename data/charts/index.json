@@ -629,6 +629,48 @@
           "targets": 631
         }
       ]
+    },
+    {
+      "id": "jugglers-of-vienna",
+      "title": "Jugglers of Vienna",
+      "by": "BOSU",
+      "audio": "audio/jugglers-of-vienna.mp3",
+      "audio_hash": "20494e074330d1d0",
+      "bpm_milli": 160000,
+      "length_us": 121500589,
+      "first_sound_us": 500022,
+      "charts": [
+        {
+          "difficulty": 0,
+          "file": "charts/jugglers-of-vienna-easy.json",
+          "hash": "c5375d2f8d8b3074",
+          "targets": 281
+        },
+        {
+          "difficulty": 1,
+          "file": "charts/jugglers-of-vienna-normal.json",
+          "hash": "45057e56c1c100df",
+          "targets": 314
+        },
+        {
+          "difficulty": 2,
+          "file": "charts/jugglers-of-vienna-hard.json",
+          "hash": "e9bc1e3899c21482",
+          "targets": 501
+        },
+        {
+          "difficulty": 3,
+          "file": "charts/jugglers-of-vienna-expert.json",
+          "hash": "434b70fc2a61971c",
+          "targets": 713
+        },
+        {
+          "difficulty": 4,
+          "file": "charts/jugglers-of-vienna-master.json",
+          "hash": "0d03bca0b444621b",
+          "targets": 788
+        }
+      ]
     }
   ]
 }

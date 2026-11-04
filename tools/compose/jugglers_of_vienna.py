@@ -79,9 +79,12 @@ class Score:
         self.sections = []
         self.chords = []   # one symbol a bar
 
-    def part(self, name, preset, gain, pan, weight, clef="treble", lead=False):
+    def part(self, name, preset, gain, pan, weight, clef="treble", lead=False, play_from=None):
         self.parts[name] = {"name": name, "preset": preset, "gain": gain, "pan": pan, "chart_weight": weight,
                             "clef": clef, "lead": lead, "notes": []}
+        if play_from is not None:
+            # the easiest difficulty that plays every note of this part (0 Easy .. 3 Expert)
+            self.parts[name]["play_from"] = play_from
 
     def note(self, part, bar, beat, length_beats, pitch, vel):
         t = round((bar * BAR + beat) * TICKS)
@@ -117,11 +120,11 @@ class Score:
 s = Score()
 # the band: Vector37's factory sounds (presets.c), gain in thousandths, pan, and how much a player hears each one
 # as something to tap (the chart's weight: 0 for a pad, which has no hit)
-s.part("Ocarina", 29, 1000, 0, 10, lead=True)       # FLUTE LEAD: "a hollow ocarina"
+s.part("Ocarina", 29, 1000, 0, 10, lead=True, play_from=1)   # FLUTE LEAD: "a hollow ocarina"; the tune from Normal
 s.part("Music box", 23, 420, 35, 2)
-s.part("Harp", 21, 520, -30, 3, clef="bass")
-s.part("Marimba", 22, 620, -65, 5)                  # the left hand
-s.part("Kalimba", 12, 560, 65, 5)                   # the right hand
+s.part("Harp", 21, 520, -30, 3, clef="bass", play_from=2)   # its eighths from Hard
+s.part("Marimba", 22, 620, -65, 5, play_from=3)     # the left hand; the juggling (125 ms apart) from Expert
+s.part("Kalimba", 12, 560, 65, 5, play_from=3)      # the right hand
 s.part("Organ", 19, 300, 20, 2)                     # DRAWBAR ORGAN: the waltz's pah-pah
 s.part("Choir", 18, 260, 0, 0)
 s.part("Strings", 16, 300, -10, 0)

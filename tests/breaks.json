@@ -534,8 +534,8 @@
  {
   "name": "from the true chart, Easy to Hard follow the groove",
   "file": "crates/core/src/generate.rs",
-  "find": "        Some(level) => level.clone(),",
-  "replace": "        Some(_) => thin(a, &hits, &DIFFICULTIES[difficulty], 100, true, gap(difficulty), &[]),",
+  "find": "        below = featured(a, &hits, &below, k, gap(k), level);",
+  "replace": "        below = thin(a, &hits, &DIFFICULTIES[k], 100, true, gap(k), &level[..0]);",
   "test": "from_the_true_chart_easy_keeps_every_beat"
  },
  {
@@ -635,5 +635,26 @@
   "find": "        .filter(|&q| a.slots[q] > 0 && a.slots[q] >= median)",
   "replace": "        .filter(|&q| a.slots[q] > 0)",
   "test": "the_audio_agrees_with_a_score_when_its_onsets_are_on_the_notes"
+ },
+ {
+  "name": "a score's featured part joins from its level",
+  "file": "crates/core/src/generate.rs",
+  "find": "    for q in asked.chain(groove.iter().copied()) {",
+  "replace": "    for q in asked.take(0).chain(groove.iter().copied()) {",
+  "test": "a_scores_featured_part_is_played_from_the_level_it_names"
+ },
+ {
+  "name": "a score's featured part waits for its level",
+  "file": "crates/core/src/generate.rs",
+  "find": "        .filter(|&q| a.play_from.get(q).is_some_and(|&f| f as usize <= k));",
+  "replace": "        .filter(|&q| a.play_from.get(q).is_some_and(|&f| f as usize <= k + 1));",
+  "test": "a_scores_featured_part_is_played_from_the_level_it_names"
+ },
+ {
+  "name": "a score part's level is read",
+  "file": "crates/core/src/score.rs",
+  "find": "                    play_from[line] = play_from[line].min(k);",
+  "replace": "                    play_from[line] = play_from[line].min(k + 1);",
+  "test": "a_score_part_names_the_level_it_is_played_from"
  }
 ]

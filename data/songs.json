@@ -14,6 +14,7 @@
     {"id": "3000-jelly", "title": "3000 Jelly", "by": "BOSU", "audio": "audio/3000-jelly.mp3", "seed": 2, "true_chart": true},
     {"id": "disco-satellite", "title": "Disco Satellite", "by": "BOSU", "audio": "audio/disco-satellite.mp3", "seed": 3, "true_chart": true},
     {"id": "velvet-moped", "title": "Velvet Moped", "by": "BOSU", "audio": "audio/velvet-moped.mp3", "seed": 4, "true_chart": true},
-    {"id": "neon-cassette-shuffle", "title": "Neon Cassette Shuffle", "by": "BOSU", "audio": "audio/neon-cassette-shuffle.mp3", "seed": 5, "true_chart": true}
+    {"id": "neon-cassette-shuffle", "title": "Neon Cassette Shuffle", "by": "BOSU", "audio": "audio/neon-cassette-shuffle.mp3", "seed": 5, "true_chart": true},
+    {"id": "jugglers-of-vienna", "title": "Jugglers of Vienna", "by": "BOSU", "audio": "audio/jugglers-of-vienna.mp3", "seed": 6, "true_chart": true, "score": "scores/jugglers-of-vienna.json"}
   ]
 }

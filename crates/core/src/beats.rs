@@ -67,7 +67,14 @@ pub struct Analysis {
     /// line lasts, 0 where none starts; a hold may follow it (R8.2).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub sustains: Vec<u32>,
+    /// From a score: the easiest difficulty a part playing on each line
+    /// asks to be played from, or `NOT_FEATURED` (R8.4).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub play_from: Vec<u8>,
 }
+
+/// A line no score part asks to have played.
+pub const NOT_FEATURED: u8 = u8::MAX;
 
 fn four() -> i64 {
     4
@@ -544,6 +551,7 @@ fn slots_for(
         first_sound_us: 0,
         bar_beats: 4,
         sustains: Vec::new(),
+        play_from: Vec::new(),
     }
 }
 
