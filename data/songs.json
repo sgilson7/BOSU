@@ -1,19 +1,19 @@
 {
   "songs": [
-    {"id": "bunko-carnival", "title": "bunko carnival", "by": "boyetano", "audio": "audio/bunko-carnival.mp3", "seed": 101},
-    {"id": "bonecereal", "title": "BoneCereal", "by": "Leefy5", "audio": "audio/bonecereal.mp3", "seed": 102},
-    {"id": "grunge-dome", "title": "Grunge Dome", "by": "Emracool", "audio": "audio/grunge-dome.mp3", "seed": 103},
-    {"id": "lime-cruncher", "title": "Lime Cruncher", "by": "Emracool", "audio": "audio/lime-cruncher.mp3", "seed": 104},
-    {"id": "monke-walkin", "title": "Monke Walkin'", "by": "Leefy5", "audio": "audio/monke-walkin.mp3", "seed": 105},
-    {"id": "vamoss-den", "title": "Vamos's Den", "by": "Leefy5", "audio": "audio/vamoss-den.mp3", "seed": 106},
+    {"id": "bunko-carnival", "title": "bunko carnival", "by": "boyetano", "audio": "audio/bunko-carnival.mp3", "seed": 101, "true_chart": true},
+    {"id": "bonecereal", "title": "BoneCereal", "by": "Leefy5", "audio": "audio/bonecereal.mp3", "seed": 102, "true_chart": true},
+    {"id": "grunge-dome", "title": "Grunge Dome", "by": "Emracool", "audio": "audio/grunge-dome.mp3", "seed": 103, "true_chart": true},
+    {"id": "lime-cruncher", "title": "Lime Cruncher", "by": "Emracool", "audio": "audio/lime-cruncher.mp3", "seed": 104, "true_chart": true},
+    {"id": "monke-walkin", "title": "Monke Walkin'", "by": "Leefy5", "audio": "audio/monke-walkin.mp3", "seed": 105, "true_chart": true},
+    {"id": "vamoss-den", "title": "Vamos's Den", "by": "Leefy5", "audio": "audio/vamoss-den.mp3", "seed": 106, "true_chart": true},
     {"id": "ballad-of-mr-nasty", "title": "Ballad Of Mr Nasty", "by": "Emracool", "audio": "audio/ballad-of-mr-nasty.mp3", "seed": 107, "true_chart": true},
-    {"id": "space-tsunami", "title": "Space Tsunami", "by": "Leefy5", "audio": "audio/space-tsunami.mp3", "seed": 108},
-    {"id": "smiley", "title": ":)", "by": "boyetano", "audio": "audio/smiley.mp3", "seed": 109},
-    {"id": "baped-out", "title": "Baped Out", "by": "Emracool", "audio": "audio/baped-out.mp3", "seed": 110},
-    {"id": "sunrise-on-the-ganges", "title": "Sunrise on the Ganges", "by": "BOSU", "audio": "audio/sunrise-on-the-ganges.mp3", "seed": 1},
-    {"id": "3000-jelly", "title": "3000 Jelly", "by": "BOSU", "audio": "audio/3000-jelly.mp3", "seed": 2},
-    {"id": "disco-satellite", "title": "Disco Satellite", "by": "BOSU", "audio": "audio/disco-satellite.mp3", "seed": 3},
-    {"id": "velvet-moped", "title": "Velvet Moped", "by": "BOSU", "audio": "audio/velvet-moped.mp3", "seed": 4},
-    {"id": "neon-cassette-shuffle", "title": "Neon Cassette Shuffle", "by": "BOSU", "audio": "audio/neon-cassette-shuffle.mp3", "seed": 5}
+    {"id": "space-tsunami", "title": "Space Tsunami", "by": "Leefy5", "audio": "audio/space-tsunami.mp3", "seed": 108, "true_chart": true},
+    {"id": "smiley", "title": ":)", "by": "boyetano", "audio": "audio/smiley.mp3", "seed": 109, "true_chart": true},
+    {"id": "baped-out", "title": "Baped Out", "by": "Emracool", "audio": "audio/baped-out.mp3", "seed": 110, "true_chart": true},
+    {"id": "sunrise-on-the-ganges", "title": "Sunrise on the Ganges", "by": "BOSU", "audio": "audio/sunrise-on-the-ganges.mp3", "seed": 1, "true_chart": true},
+    {"id": "3000-jelly", "title": "3000 Jelly", "by": "BOSU", "audio": "audio/3000-jelly.mp3", "seed": 2, "true_chart": true},
+    {"id": "disco-satellite", "title": "Disco Satellite", "by": "BOSU", "audio": "audio/disco-satellite.mp3", "seed": 3, "true_chart": true},
+    {"id": "velvet-moped", "title": "Velvet Moped", "by": "BOSU", "audio": "audio/velvet-moped.mp3", "seed": 4, "true_chart": true},
+    {"id": "neon-cassette-shuffle", "title": "Neon Cassette Shuffle", "by": "BOSU", "audio": "audio/neon-cassette-shuffle.mp3", "seed": 5, "true_chart": true}
   ]
 }

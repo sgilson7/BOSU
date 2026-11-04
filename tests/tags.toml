@@ -74,3 +74,9 @@ steps = ["core", "build", "browser"]
 name = "the song tools"
 files = ["tools/songs/**"]
 steps = ["core", "build", "browser"]
+
+[[rule]]
+name = "composed songs: the composition, its renderer and its drawn score"
+# the score in data/scores/ is checked by the core suite; these make it
+files = ["tools/compose/**", "docs/scores/**"]
+steps = ["core"]

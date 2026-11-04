@@ -13,6 +13,7 @@ use std::process::{exit, Command};
 
 use tool_core::beats::{self, Analysis};
 use tool_core::catalog;
+use tool_core::score;
 
 fn read(path: &str) -> String {
     fs::read_to_string(path).unwrap_or_else(|e| fail(&format!("cannot read {path}: {e}")))
@@ -70,8 +71,32 @@ fn main() {
             fs::create_dir_all("data/analysis").unwrap_or_else(|e| fail(&e.to_string()));
             for s in &songs.songs {
                 let samples = decode(&format!("web/{}", s.audio));
-                let mut a = beats::analyse_with(&samples, s.bpm_milli)
-                    .unwrap_or_else(|| fail(&format!("{}: no beat found", s.id)));
+                let mut a = match &s.score {
+                    // a composed song: the notes, checked against what the
+                    // audio's onsets say (R8.1)
+                    Some(path) => {
+                        let sc = score::Score::parse(&read(&format!("data/{path}")))
+                            .unwrap_or_else(|e| fail(&format!("{}: {}", s.id, e.message())));
+                        let a = sc
+                            .analysis(samples.len() as i64 * beats::US / beats::RATE)
+                            .unwrap_or_else(|e| fail(&format!("{}: {}", s.id, e.message())));
+                        let agree = score::agreement(&a, &beats::peaks(&beats::envelope(&samples)));
+                        println!(
+                            "{}: {agree}% of the score's strong notes have an onset in the audio",
+                            s.id
+                        );
+                        if agree < score::AGREE_PCT {
+                            fail(&format!(
+                                "{}: the audio does not follow its score ({agree}% against {}%)",
+                                s.id,
+                                score::AGREE_PCT
+                            ));
+                        }
+                        a
+                    }
+                    None => beats::analyse_with(&samples, s.bpm_milli)
+                        .unwrap_or_else(|| fail(&format!("{}: no beat found", s.id))),
+                };
                 a.first_sound_us =
                     beats::first_sound_us(&decode_head(&format!("web/{}", s.audio)), HEAD_RATE).unwrap_or(0);
                 let text = serde_json::to_string(&a).unwrap_or_default() + "\n";

@@ -29,6 +29,10 @@ pub struct Song {
     /// out (R7.6).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub true_chart: bool,
+    /// A composed song's score, relative to `data/`: its chart comes from
+    /// the notes, not from the beat finder (R8.1).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub score: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -13,32 +13,32 @@
         {
           "difficulty": 0,
           "file": "charts/bunko-carnival-easy.json",
-          "hash": "83ef76059064f38d",
-          "targets": 116
+          "hash": "f6b4deebbb7f394b",
+          "targets": 262
         },
         {
           "difficulty": 1,
           "file": "charts/bunko-carnival-normal.json",
-          "hash": "c897823133287bc6",
-          "targets": 143
+          "hash": "d77f9c0ffadd5eea",
+          "targets": 331
         },
         {
           "difficulty": 2,
           "file": "charts/bunko-carnival-hard.json",
-          "hash": "27d9b2a290961e83",
-          "targets": 251
+          "hash": "068e542c02453f8d",
+          "targets": 555
         },
         {
           "difficulty": 3,
           "file": "charts/bunko-carnival-expert.json",
-          "hash": "093e3eab6d82dfe6",
-          "targets": 476
+          "hash": "1b8da9659a3d262c",
+          "targets": 709
         },
         {
           "difficulty": 4,
           "file": "charts/bunko-carnival-master.json",
-          "hash": "3b94150b7f6c674a",
-          "targets": 517
+          "hash": "a24d87234669988f",
+          "targets": 818
         }
       ]
     },
@@ -55,32 +55,32 @@
         {
           "difficulty": 0,
           "file": "charts/bonecereal-easy.json",
-          "hash": "7d896c34745f87af",
-          "targets": 143
+          "hash": "a4239e9f7613025e",
+          "targets": 359
         },
         {
           "difficulty": 1,
           "file": "charts/bonecereal-normal.json",
-          "hash": "5f996e319e9ca6d5",
-          "targets": 191
+          "hash": "d09a829fa038799e",
+          "targets": 459
         },
         {
           "difficulty": 2,
           "file": "charts/bonecereal-hard.json",
-          "hash": "53d9f5053735048a",
-          "targets": 331
+          "hash": "e92ef2d5355c1396",
+          "targets": 766
         },
         {
           "difficulty": 3,
           "file": "charts/bonecereal-expert.json",
-          "hash": "57cd32f07352559b",
-          "targets": 666
+          "hash": "d5401b923565738d",
+          "targets": 1062
         },
         {
           "difficulty": 4,
           "file": "charts/bonecereal-master.json",
-          "hash": "2995e68127509049",
-          "targets": 735
+          "hash": "1cb7b5000de974c9",
+          "targets": 1216
         }
       ]
     },
@@ -97,32 +97,32 @@
         {
           "difficulty": 0,
           "file": "charts/grunge-dome-easy.json",
-          "hash": "ca12e40bfe0bb250",
-          "targets": 23
+          "hash": "2345c3d903eb17cd",
+          "targets": 52
         },
         {
           "difficulty": 1,
           "file": "charts/grunge-dome-normal.json",
-          "hash": "fa1d56665044f993",
-          "targets": 43
+          "hash": "ce1f5479d6c909ef",
+          "targets": 82
         },
         {
           "difficulty": 2,
           "file": "charts/grunge-dome-hard.json",
-          "hash": "32cd16bf272c5653",
-          "targets": 46
+          "hash": "f1042bd12e47562e",
+          "targets": 103
         },
         {
           "difficulty": 3,
           "file": "charts/grunge-dome-expert.json",
-          "hash": "ae23dd2e8ca4f673",
-          "targets": 99
+          "hash": "2a2a68855861be6b",
+          "targets": 152
         },
         {
           "difficulty": 4,
           "file": "charts/grunge-dome-master.json",
-          "hash": "86907aae3e6e5bcf",
-          "targets": 163
+          "hash": "1df9768fbb01e1da",
+          "targets": 174
         }
       ]
     },
@@ -139,32 +139,32 @@
         {
           "difficulty": 0,
           "file": "charts/lime-cruncher-easy.json",
-          "hash": "505e558d783b5895",
-          "targets": 65
+          "hash": "f27692540bcb37ad",
+          "targets": 105
         },
         {
           "difficulty": 1,
           "file": "charts/lime-cruncher-normal.json",
-          "hash": "5d4f44aef880f32f",
-          "targets": 107
+          "hash": "632b0f11c61af4aa",
+          "targets": 132
         },
         {
           "difficulty": 2,
           "file": "charts/lime-cruncher-hard.json",
-          "hash": "d00dd3b81224f129",
-          "targets": 126
+          "hash": "137118b2dcf30fc3",
+          "targets": 272
         },
         {
           "difficulty": 3,
           "file": "charts/lime-cruncher-expert.json",
-          "hash": "e0a9de872f60865a",
-          "targets": 247
+          "hash": "76e254781d1e7619",
+          "targets": 414
         },
         {
           "difficulty": 4,
           "file": "charts/lime-cruncher-master.json",
-          "hash": "98b879862b87660a",
-          "targets": 432
+          "hash": "c076a6e3ec189885",
+          "targets": 462
         }
       ]
     },
@@ -181,32 +181,32 @@
         {
           "difficulty": 0,
           "file": "charts/monke-walkin-easy.json",
-          "hash": "7c254d5681b83be7",
-          "targets": 61
+          "hash": "5a6616c004c5831f",
+          "targets": 203
         },
         {
           "difficulty": 1,
           "file": "charts/monke-walkin-normal.json",
-          "hash": "388bfb2314c49969",
-          "targets": 141
+          "hash": "bb0e87b675d632ff",
+          "targets": 369
         },
         {
           "difficulty": 2,
           "file": "charts/monke-walkin-hard.json",
-          "hash": "522f42f9fb3949e3",
-          "targets": 162
+          "hash": "33d869e5b25ac855",
+          "targets": 633
         },
         {
           "difficulty": 3,
           "file": "charts/monke-walkin-expert.json",
-          "hash": "6fcbe39b54ef7611",
-          "targets": 387
+          "hash": "174f629746533434",
+          "targets": 720
         },
         {
           "difficulty": 4,
           "file": "charts/monke-walkin-master.json",
-          "hash": "d31d6afc7ecd04ef",
-          "targets": 721
+          "hash": "5263fcf166dd5c20",
+          "targets": 792
         }
       ]
     },
@@ -223,32 +223,32 @@
         {
           "difficulty": 0,
           "file": "charts/vamoss-den-easy.json",
-          "hash": "2f127cc0cc631178",
-          "targets": 41
+          "hash": "ee80503fd0970d39",
+          "targets": 162
         },
         {
           "difficulty": 1,
           "file": "charts/vamoss-den-normal.json",
-          "hash": "23b5db124b686421",
-          "targets": 98
+          "hash": "6c2a0a5fa75ebe75",
+          "targets": 194
         },
         {
           "difficulty": 2,
           "file": "charts/vamoss-den-hard.json",
-          "hash": "be3bd15f58678ad6",
-          "targets": 138
+          "hash": "ccfe9e887cf203dc",
+          "targets": 429
         },
         {
           "difficulty": 3,
           "file": "charts/vamoss-den-expert.json",
-          "hash": "9ae5374f1e95a29e",
-          "targets": 233
+          "hash": "ecc2d284c104c149",
+          "targets": 470
         },
         {
           "difficulty": 4,
           "file": "charts/vamoss-den-master.json",
-          "hash": "5ce5555dfb1330f8",
-          "targets": 481
+          "hash": "ecaa30e0035c2bca",
+          "targets": 772
         }
       ]
     },
@@ -307,32 +307,32 @@
         {
           "difficulty": 0,
           "file": "charts/space-tsunami-easy.json",
-          "hash": "fef53a8af4ca1f2b",
-          "targets": 43
+          "hash": "98831f2db015f750",
+          "targets": 94
         },
         {
           "difficulty": 1,
           "file": "charts/space-tsunami-normal.json",
-          "hash": "247d3f2a2af2ae94",
-          "targets": 86
+          "hash": "5cfa85c7cb25377f",
+          "targets": 140
         },
         {
           "difficulty": 2,
           "file": "charts/space-tsunami-hard.json",
-          "hash": "98d9c4cc41a5f0ec",
-          "targets": 99
+          "hash": "6c8c2f0fa96c6746",
+          "targets": 179
         },
         {
           "difficulty": 3,
           "file": "charts/space-tsunami-expert.json",
-          "hash": "29c60aa79c6449e3",
-          "targets": 186
+          "hash": "949055b1eb109c58",
+          "targets": 264
         },
         {
           "difficulty": 4,
           "file": "charts/space-tsunami-master.json",
-          "hash": "328415dba4d6931f",
-          "targets": 280
+          "hash": "560f06d235880bfb",
+          "targets": 479
         }
       ]
     },
@@ -349,32 +349,32 @@
         {
           "difficulty": 0,
           "file": "charts/smiley-easy.json",
-          "hash": "3a45274af6905119",
-          "targets": 70
+          "hash": "5215faf20de5f3c9",
+          "targets": 187
         },
         {
           "difficulty": 1,
           "file": "charts/smiley-normal.json",
-          "hash": "c0eb71a3c7cccca4",
-          "targets": 140
+          "hash": "bc10ffb22ddbe0d0",
+          "targets": 322
         },
         {
           "difficulty": 2,
           "file": "charts/smiley-hard.json",
-          "hash": "57c68454f20423ef",
-          "targets": 161
+          "hash": "26a35aecc93c0434",
+          "targets": 577
         },
         {
           "difficulty": 3,
           "file": "charts/smiley-expert.json",
-          "hash": "fadfc40e63d3dc0c",
-          "targets": 372
+          "hash": "2212939ee52eca14",
+          "targets": 661
         },
         {
           "difficulty": 4,
           "file": "charts/smiley-master.json",
-          "hash": "a74eba487fd3a5e5",
-          "targets": 679
+          "hash": "043cbfc461829aee",
+          "targets": 744
         }
       ]
     },
@@ -391,32 +391,32 @@
         {
           "difficulty": 0,
           "file": "charts/baped-out-easy.json",
-          "hash": "54b1e3026abc8a3f",
-          "targets": 78
+          "hash": "f5b37ebf5555c4d6",
+          "targets": 235
         },
         {
           "difficulty": 1,
           "file": "charts/baped-out-normal.json",
-          "hash": "43f1b11ef65dcb98",
-          "targets": 187
+          "hash": "4b7bca3d372a7670",
+          "targets": 393
         },
         {
           "difficulty": 2,
           "file": "charts/baped-out-hard.json",
-          "hash": "8c3e275f0d2933d4",
-          "targets": 216
+          "hash": "c1347b1018ad48fc",
+          "targets": 608
         },
         {
           "difficulty": 3,
           "file": "charts/baped-out-expert.json",
-          "hash": "54b5e5358e01768a",
-          "targets": 415
+          "hash": "db7e22b07cef868f",
+          "targets": 700
         },
         {
           "difficulty": 4,
           "file": "charts/baped-out-master.json",
-          "hash": "b451b24feb093722",
-          "targets": 729
+          "hash": "aa77d870f6a7c35f",
+          "targets": 777
         }
       ]
     },
@@ -433,32 +433,32 @@
         {
           "difficulty": 0,
           "file": "charts/sunrise-on-the-ganges-easy.json",
-          "hash": "21c21b13924cc6af",
-          "targets": 85
+          "hash": "dc8fcf2e38bb390a",
+          "targets": 113
         },
         {
           "difficulty": 1,
           "file": "charts/sunrise-on-the-ganges-normal.json",
-          "hash": "2c24393d5547ecc6",
-          "targets": 111
+          "hash": "28b373fc6dda34fe",
+          "targets": 142
         },
         {
           "difficulty": 2,
           "file": "charts/sunrise-on-the-ganges-hard.json",
-          "hash": "ff33ab6b2eff0e62",
-          "targets": 179
+          "hash": "0d4f6c02160093b2",
+          "targets": 222
         },
         {
           "difficulty": 3,
           "file": "charts/sunrise-on-the-ganges-expert.json",
-          "hash": "62950e707692d694",
-          "targets": 212
+          "hash": "4aa3c46ec6ab6795",
+          "targets": 279
         },
         {
           "difficulty": 4,
           "file": "charts/sunrise-on-the-ganges-master.json",
-          "hash": "fbbd76a0db518926",
-          "targets": 261
+          "hash": "73ffa891e8740079",
+          "targets": 326
         }
       ]
     },
@@ -475,32 +475,32 @@
         {
           "difficulty": 0,
           "file": "charts/3000-jelly-easy.json",
-          "hash": "b8c9eb6fa979866f",
-          "targets": 58
+          "hash": "58562026df3e0b87",
+          "targets": 143
         },
         {
           "difficulty": 1,
           "file": "charts/3000-jelly-normal.json",
-          "hash": "5cef16c9d1958155",
-          "targets": 124
+          "hash": "7dfc21a2e9d9fc93",
+          "targets": 168
         },
         {
           "difficulty": 2,
           "file": "charts/3000-jelly-hard.json",
-          "hash": "f1f6a4eaafd5de53",
-          "targets": 142
+          "hash": "24c3cc48da1cf7c7",
+          "targets": 282
         },
         {
           "difficulty": 3,
           "file": "charts/3000-jelly-expert.json",
-          "hash": "2a82e17b00435f3a",
-          "targets": 273
+          "hash": "32b6653b04a46bd1",
+          "targets": 374
         },
         {
           "difficulty": 4,
           "file": "charts/3000-jelly-master.json",
-          "hash": "85ca78af4a1580eb",
-          "targets": 357
+          "hash": "f7bf9e8ae89c0320",
+          "targets": 448
         }
       ]
     },
@@ -517,32 +517,32 @@
         {
           "difficulty": 0,
           "file": "charts/disco-satellite-easy.json",
-          "hash": "0d6a8bb3a9fd4fec",
-          "targets": 60
+          "hash": "bb53a6d31ccbd12f",
+          "targets": 170
         },
         {
           "difficulty": 1,
           "file": "charts/disco-satellite-normal.json",
-          "hash": "507361edc8cde189",
-          "targets": 147
+          "hash": "2cd695955957ab32",
+          "targets": 194
         },
         {
           "difficulty": 2,
           "file": "charts/disco-satellite-hard.json",
-          "hash": "60ea491acbdfef71",
-          "targets": 169
+          "hash": "5f6bb43f91b87db8",
+          "targets": 327
         },
         {
           "difficulty": 3,
           "file": "charts/disco-satellite-expert.json",
-          "hash": "1cc0ab6c04d15d8c",
-          "targets": 293
+          "hash": "bef7577bc5a806ca",
+          "targets": 448
         },
         {
           "difficulty": 4,
           "file": "charts/disco-satellite-master.json",
-          "hash": "be84434b3415821a",
-          "targets": 324
+          "hash": "f058f3038d505801",
+          "targets": 511
         }
       ]
     },
@@ -559,32 +559,32 @@
         {
           "difficulty": 0,
           "file": "charts/velvet-moped-easy.json",
-          "hash": "e5072c2f9124f4f6",
-          "targets": 76
+          "hash": "036ad169ae792a52",
+          "targets": 194
         },
         {
           "difficulty": 1,
           "file": "charts/velvet-moped-normal.json",
-          "hash": "dc2d72892545cfd4",
-          "targets": 168
+          "hash": "d7c5e8257bfba5f1",
+          "targets": 213
         },
         {
           "difficulty": 2,
           "file": "charts/velvet-moped-hard.json",
-          "hash": "655924a354c663e2",
-          "targets": 192
+          "hash": "ca9dd7369e16dc38",
+          "targets": 374
         },
         {
           "difficulty": 3,
           "file": "charts/velvet-moped-expert.json",
-          "hash": "d318f320b883c98c",
-          "targets": 336
+          "hash": "7b58a631e5a2c295",
+          "targets": 522
         },
         {
           "difficulty": 4,
           "file": "charts/velvet-moped-master.json",
-          "hash": "ee0062e047574378",
-          "targets": 376
+          "hash": "89c13f3c0de58a48",
+          "targets": 595
         }
       ]
     },
@@ -601,32 +601,32 @@
         {
           "difficulty": 0,
           "file": "charts/neon-cassette-shuffle-easy.json",
-          "hash": "4c913730d9fae8d6",
-          "targets": 88
+          "hash": "5b226a276c8642f6",
+          "targets": 237
         },
         {
           "difficulty": 1,
           "file": "charts/neon-cassette-shuffle-normal.json",
-          "hash": "db2ada7f159e0905",
-          "targets": 100
+          "hash": "8f5c36d928dde570",
+          "targets": 253
         },
         {
           "difficulty": 2,
           "file": "charts/neon-cassette-shuffle-hard.json",
-          "hash": "c5962ac907ccc88e",
-          "targets": 236
+          "hash": "9d0874fa4495e209",
+          "targets": 423
         },
         {
           "difficulty": 3,
           "file": "charts/neon-cassette-shuffle-expert.json",
-          "hash": "121e62d545fd70b6",
-          "targets": 401
+          "hash": "674a349147eaf3de",
+          "targets": 569
         },
         {
           "difficulty": 4,
           "file": "charts/neon-cassette-shuffle-master.json",
-          "hash": "a95bb4083e508b4c",
-          "targets": 441
+          "hash": "b517df0712d01a9b",
+          "targets": 631
         }
       ]
     }

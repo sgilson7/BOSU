@@ -422,7 +422,7 @@
  {
   "name": "targets are shared out by phrase",
   "file": "crates/core/src/generate.rs",
-  "find": "    let phrase_lines = (PHRASE_BEATS * a.division) as usize;",
+  "find": "    let phrase_lines = (phrase_beats(a) * a.division) as usize;",
   "replace": "    let phrase_lines = usize::MAX / 2;",
   "test": "a_quiet_opening_still_gets_targets"
  },
@@ -520,8 +520,8 @@
  {
   "name": "from the true chart, gaps follow the beat",
   "file": "crates/core/src/generate.rs",
-  "find": "let gap = |k: usize| DIFFICULTIES[k].min_gap_us.min(a.beat_us / TRUE_GAP_DIVISORS[k]);",
-  "replace": "let gap = |k: usize| DIFFICULTIES[k].min_gap_us;",
+  "find": "        DIFFICULTIES[k].min_gap_us.min(a.beat_us / divisor)",
+  "replace": "        DIFFICULTIES[k].min_gap_us + 0 * divisor",
   "test": "from_the_true_chart_triplets_at_120_stay_on_hard"
  },
  {
@@ -544,5 +544,96 @@
   "find": "        let (lo, hi) = (b.saturating_sub(GROOVE_BACK), (b + GROOVE_AHEAD + 1).min(bars));",
   "replace": "        let (lo, hi) = (b, b + 1);",
   "test": "from_the_true_chart_normal_follows_the_groove_not_one_stray_hit"
+ },
+ {
+  "name": "a straight song's light half beats stay out of Normal",
+  "file": "crates/core/src/generate.rs",
+  "find": "                    1 if straight && p % d != 0 => STRAIGHT_HALF_PCT,",
+  "replace": "",
+  "test": "a_straight_songs_normal_leaves_its_lightly_stressed_half_beats"
+ },
+ {
+  "name": "a straight song's Hard takes the quarter beats",
+  "file": "crates/core/src/generate.rs",
+  "find": "            (2, d) if d != 0 => STRAIGHT_HARD_DIVISOR,",
+  "replace": "",
+  "test": "a_straight_songs_hard_adds_the_quarter_beats_it_leans_on"
+ },
+ {
+  "name": "a straight song's light quarter beats stay out of Hard",
+  "file": "crates/core/src/generate.rs",
+  "find": "                    2 if straight && !on_grid(p, a.division, 2) => STRAIGHT_QUARTER_PCT,",
+  "replace": "",
+  "test": "a_straight_songs_hard_adds_the_quarter_beats_it_leans_on"
+ },
+ {
+  "name": "the groove is a mean over the bars inside the song",
+  "file": "crates/core/src/generate.rs",
+  "find": "                (prefix[hi][p] - prefix[lo][p]) * GROOVE_BARS / bars_in.max(1)",
+  "replace": "                (prefix[hi][p] - prefix[lo][p]) * GROOVE_BARS / GROOVE_BARS + 0 * bars_in",
+  "test": "a_straight_songs_hard_adds_the_quarter_beats_it_leans_on"
+ },
+ {
+  "name": "the groove's bar is the song's",
+  "file": "crates/core/src/generate.rs",
+  "find": "    let bar = a.bar_beats.max(1) as usize * d;",
+  "replace": "    let bar = 4 * d;",
+  "test": "a_waltzs_easy_is_its_downbeats"
+ },
+ {
+  "name": "a phrase is whole bars",
+  "file": "crates/core/src/generate.rs",
+  "find": "    bar * (((PHRASE_BEATS + bar - 1) / bar).max(1) as u64).next_power_of_two() as i64",
+  "replace": "    PHRASE_BEATS + 0 * bar",
+  "test": "a_waltzs_combo_starts_again_every_four_bars"
+ },
+ {
+  "name": "from a score, the lead's long notes are holds",
+  "file": "crates/core/src/generate.rs",
+  "find": "                Some((a.slot_time(slots[k] + lines as usize)).min(next_t - d.min_gap_us))",
+  "replace": "                Some(next_t - d.min_gap_us + 0 * lines as i64)",
+  "test": "from_a_score_the_leads_long_notes_are_held"
+ },
+ {
+  "name": "a score's grid is the fewest lines",
+  "file": "crates/core/src/score.rs",
+  "find": "const DIVISIONS: [i64; 4] = [2, 3, 4, 6];",
+  "replace": "const DIVISIONS: [i64; 4] = [6, 4, 3, 2];",
+  "test": "a_score_in_straight_eighths_is_charted_on_half_beats"
+ },
+ {
+  "name": "a score's stress is summed over its parts",
+  "file": "crates/core/src/score.rs",
+  "find": "                accents[line] = accents[line].saturating_add(v);",
+  "replace": "                accents[line] = accents[line].max(v);",
+  "test": "a_score_gives_its_beat_bar_and_hits_exactly"
+ },
+ {
+  "name": "a score's sustains are in grid lines",
+  "file": "crates/core/src/score.rs",
+  "find": "                    sustains[line] = sustains[line].max((n[1] / tick_lines) as u32);",
+  "replace": "                    sustains[line] = sustains[line].max(n[1] as u32);",
+  "test": "a_score_gives_its_beat_bar_and_hits_exactly"
+ },
+ {
+  "name": "a score note off every grid is refused",
+  "file": "crates/core/src/score.rs",
+  "find": "            .find(|&d| tpb % d == 0 && heard.iter().all(|(_, t)| t % (tpb / d) == 0))",
+  "replace": "            .find(|&d| tpb % d == 0 && heard.iter().all(|(_, t)| t % (tpb / d) == 0) || d == 6)",
+  "test": "a_score_note_off_every_grid_is_refused"
+ },
+ {
+  "name": "the audio agrees with a score within 25 ms",
+  "file": "crates/core/src/score.rs",
+  "find": "            times.get(k).is_some_and(|&p| p <= t + AGREE_US)",
+  "replace": "            times.get(k).is_some_and(|&p| p <= t + 2 * AGREE_US)",
+  "test": "the_audio_agrees_with_a_score_when_its_onsets_are_on_the_notes"
+ },
+ {
+  "name": "the audio agrees with a score's strong notes",
+  "file": "crates/core/src/score.rs",
+  "find": "        .filter(|&q| a.slots[q] > 0 && a.slots[q] >= median)",
+  "replace": "        .filter(|&q| a.slots[q] > 0)",
+  "test": "the_audio_agrees_with_a_score_when_its_onsets_are_on_the_notes"
  }
 ]

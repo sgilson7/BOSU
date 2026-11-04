@@ -22,6 +22,7 @@ pub mod page;
 pub mod play;
 pub mod rng;
 pub mod save;
+pub mod score;
 pub mod sound;
 pub mod together;
 pub mod tuning;

@@ -59,6 +59,22 @@ pub struct Analysis {
     /// song time by the difference (R6.6).
     #[serde(default)]
     pub first_sound_us: i64,
+    /// Beats a bar, for the groove and the combo's phrases: 4 unless a
+    /// score says otherwise (R8.2).
+    #[serde(default = "four", skip_serializing_if = "is_four")]
+    pub bar_beats: i64,
+    /// From a score: how many grid lines the lead's note starting on each
+    /// line lasts, 0 where none starts; a hold may follow it (R8.2).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sustains: Vec<u32>,
+}
+
+fn four() -> i64 {
+    4
+}
+
+fn is_four(v: &i64) -> bool {
+    *v == 4
 }
 
 /// How much of a song's opening is searched for its first sound, in
@@ -526,6 +542,8 @@ fn slots_for(
         slots,
         accents: stress,
         first_sound_us: 0,
+        bar_beats: 4,
+        sustains: Vec::new(),
     }
 }
 

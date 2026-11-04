@@ -22,8 +22,16 @@ use crate::tuning::{
     Difficulty, DIFFICULTIES, HEARD_PER_MINUTE, SIZE_MAX_PCT, SIZE_MIN_PCT, X_MAX, X_MIN, Y_MAX, Y_MIN,
 };
 
-/// Beats a phrase: the combo number starts again at each phrase.
+/// Beats a phrase in a song of four-beat bars: the combo number starts
+/// again at each phrase.
 pub const PHRASE_BEATS: i64 = 8;
+
+/// Beats a phrase: `PHRASE_BEATS` in whole bars, the bars a power of two,
+/// so a waltz's phrase is four bars of three (R8.2).
+pub fn phrase_beats(a: &Analysis) -> i64 {
+    let bar = a.bar_beats.max(1);
+    bar * (((PHRASE_BEATS + bar - 1) / bar).max(1) as u64).next_power_of_two() as i64
+}
 /// Targets start this long after the song's first onset strong enough to
 /// keep, and stop this long before its end.
 const LEAD_OUT_US: i64 = 1_500_000;
@@ -37,16 +45,23 @@ const FLOOR_PCT: u64 = 8;
 /// quarter), so a song's triplets fit where a fixed time would cut them by
 /// a few ms (R7.6). The hardest has none.
 const TRUE_GAP_DIVISORS: [i64; 5] = [1, 2, 3, 4, 1];
+/// Hard's divisor in a song with no triplets, where a third of a beat
+/// would leave Hard no closer than Normal (R7.8).
+const STRAIGHT_HARD_DIVISOR: i64 = 4;
 /// Easy, Normal and Hard follow the groove from the true chart.
 const GROOVE_LEVELS: usize = 3;
-/// Beats a bar, for the groove.
-const BAR_BEATS: usize = 4;
 /// Bars before and after a bar whose hits decide its groove: eight in all.
 const GROOVE_BACK: usize = 3;
 const GROOVE_AHEAD: usize = 4;
+/// The bars a groove is summed over, for its mean.
+const GROOVE_BARS: u64 = (GROOVE_BACK + GROOVE_AHEAD + 1) as u64;
 /// A place in the bar is part of a level's groove when stressed at least
 /// this share (percent) of the most stressed place: Easy, Normal, Hard.
 const GROOVE_PCT: [u64; GROOVE_LEVELS] = [25, 25, 18];
+/// The share a quarter beat of a straight song needs to join Hard.
+/// The share a half beat of a straight song needs to join Normal.
+const STRAIGHT_HALF_PCT: u64 = 45;
+const STRAIGHT_QUARTER_PCT: u64 = 35;
 /// The true chart's floor, as a share (percent) of the strong slots: low,
 /// to leave out only what is barely there.
 const TRUE_FLOOR_PCT: u64 = 3;
@@ -152,7 +167,14 @@ fn from_true_chart(a: &Analysis, difficulty: usize) -> Vec<usize> {
     if difficulty == hardest {
         return hits;
     }
-    let gap = |k: usize| DIFFICULTIES[k].min_gap_us.min(a.beat_us / TRUE_GAP_DIVISORS[k]);
+    let gap = |k: usize| {
+        // a straight song has no thirds of a beat: its Hard takes the quarters
+        let divisor = match (k, a.division % 3) {
+            (2, d) if d != 0 => STRAIGHT_HARD_DIVISOR,
+            _ => TRUE_GAP_DIVISORS[k],
+        };
+        DIFFICULTIES[k].min_gap_us.min(a.beat_us / divisor)
+    };
     let levels = groove(a, &hits, [gap(0), gap(1), gap(2)]);
     match levels.get(difficulty) {
         Some(level) => level.clone(),
@@ -184,24 +206,38 @@ fn stress(a: &Analysis, q: usize) -> u64 {
 /// level's `GROOVE_PCT` of the bar's most stressed (R7.7).
 fn groove(a: &Analysis, hits: &[usize], gaps: [i64; GROOVE_LEVELS]) -> [Vec<usize>; GROOVE_LEVELS] {
     let d = a.division as usize;
-    let bar = BAR_BEATS * d;
+    let bar = a.bar_beats.max(1) as usize * d;
     let n = a.slots.len();
     let bars = n.div_ceil(bar);
     let mut on = vec![0u64; bars * bar];
     for &q in hits {
         on[q] = stress(a, q).max(1);
     }
+    // and in how many bars each place is inside the song, so a bar near
+    // the start or the end is not judged by the silence past it
+    let (first, last) = (
+        hits.first().copied().unwrap_or(0),
+        hits.last().copied().unwrap_or(0),
+    );
     let mut prefix = vec![vec![0u64; bar]; bars + 1];
+    let mut inside = vec![vec![0u64; bar]; bars + 1];
     for b in 0..bars {
         for p in 0..bar {
-            prefix[b + 1][p] = prefix[b][p] + on[b * bar + p];
+            let q = b * bar + p;
+            prefix[b + 1][p] = prefix[b][p] + on[q];
+            inside[b + 1][p] = inside[b][p] + u64::from(q >= first && q <= last);
         }
     }
     let span = |lines: usize| lines as i64 * a.beat_us / a.division;
     let mut out: [Vec<usize>; GROOVE_LEVELS] = Default::default();
     for b in 0..bars {
         let (lo, hi) = (b.saturating_sub(GROOVE_BACK), (b + GROOVE_AHEAD + 1).min(bars));
-        let sal: Vec<u64> = (0..bar).map(|p| prefix[hi][p] - prefix[lo][p]).collect();
+        let sal: Vec<u64> = (0..bar)
+            .map(|p| {
+                let bars_in = inside[hi][p] - inside[lo][p];
+                (prefix[hi][p] - prefix[lo][p]) * GROOVE_BARS / bars_in.max(1)
+            })
+            .collect();
         let mut order: Vec<usize> = (0..bar).collect();
         order.sort_by(|&x, &y| sal[y].cmp(&sal[x]).then(x.cmp(&y)));
         let top = sal.iter().copied().max().unwrap_or(0);
@@ -210,7 +246,16 @@ fn groove(a: &Analysis, hits: &[usize], gaps: [i64; GROOVE_LEVELS]) -> [Vec<usiz
         for (level, &gap) in gaps.iter().enumerate() {
             let base = if level == 0 { top_beat } else { top };
             for &p in &order {
-                let stressed = sal[p] > 0 && sal[p] * 100 >= base * GROOVE_PCT[level];
+                // in a straight song, a half beat joins Normal and a
+                // quarter beat Hard only when the song leans on it, so
+                // each level adds to the one below (R7.8)
+                let straight = a.division % 3 != 0;
+                let pct = match level {
+                    1 if straight && p % d != 0 => STRAIGHT_HALF_PCT,
+                    2 if straight && !on_grid(p, a.division, 2) => STRAIGHT_QUARTER_PCT,
+                    _ => GROOVE_PCT[level],
+                };
+                let stressed = sal[p] > 0 && sal[p] * 100 >= base * pct;
                 let clear = places.iter().all(|&c| {
                     let apart = p.abs_diff(c);
                     span(apart.min(bar - apart)) >= gap
@@ -269,7 +314,7 @@ fn thin(
     };
     let score = |q: usize| stress(q) * weight(q, a.division);
     let by_score = |p: &usize, q: &usize| score(*q).cmp(&score(*p)).then(p.cmp(q));
-    let phrase_lines = (PHRASE_BEATS * a.division) as usize;
+    let phrase_lines = (phrase_beats(a) * a.division) as usize;
     // from the true chart any line may stay, its accent and place in the
     // beat deciding; otherwise only the difficulty's grid
     let on: Vec<usize> = pool
@@ -426,7 +471,7 @@ pub fn chart_with(song: &str, a: &Analysis, difficulty: usize, seed: u64, from_t
         heading = angle;
         at = spot;
         let beat_index = (t - a.first_beat_us) / a.beat_us;
-        let this_phrase = beat_index / PHRASE_BEATS;
+        let this_phrase = beat_index / phrase_beats(a);
         if this_phrase != phrase {
             phrase = this_phrase;
             combo = 0;
@@ -435,8 +480,19 @@ pub fn chart_with(song: &str, a: &Analysis, difficulty: usize, seed: u64, from_t
         // a hold, when the next target is far enough off
         let next_t = times.get(k + 1).copied().unwrap_or(a.length_us - LEAD_OUT_US);
         let mut hold = None;
-        if next_t - t >= HOLD_MIN_BEATS * a.beat_us && rng.chance(d.hold_pct as u32, 100) {
-            let end = next_t - a.beat_us.max(d.min_gap_us);
+        // from a score, a hold is the lead's long note, held to its end or
+        // until the next target needs the hand; otherwise a long gap
+        // sometimes becomes one (R8.2)
+        let held = match a.sustains.get(slots[k]) {
+            _ if a.sustains.is_empty() => (next_t - t >= HOLD_MIN_BEATS * a.beat_us
+                && rng.chance(d.hold_pct as u32, 100))
+            .then(|| next_t - a.beat_us.max(d.min_gap_us)),
+            Some(&lines) if lines as i64 >= HOLD_MIN_BEATS * a.division => {
+                Some((a.slot_time(slots[k] + lines as usize)).min(next_t - d.min_gap_us))
+            }
+            _ => None,
+        };
+        if let Some(end) = held {
             if end - t >= a.beat_us {
                 let len_ms = (end - t) / 1000;
                 let reach = (d.spacing * len_ms / 200).clamp(radius as i64 * 2, d.max_jump);
@@ -663,7 +719,7 @@ pub mod tests {
     fn combo_numbers_start_again_each_phrase() {
         let a = busy_song(120, 40, 12);
         let c = chart("test", &a, 3, 1);
-        let phrase_of = |t: i64| (t - a.first_beat_us) / a.beat_us / PHRASE_BEATS;
+        let phrase_of = |t: i64| (t - a.first_beat_us) / a.beat_us / phrase_beats(&a);
         for pair in c.targets.windows(2) {
             if phrase_of(pair[1].t) == phrase_of(pair[0].t) {
                 assert_eq!(pair[1].combo, pair[0].combo + 1);
@@ -762,8 +818,8 @@ pub mod tests {
     #[test]
     fn the_true_chart_has_a_target_on_every_hit() {
         // Master from the true chart: every heard line above the true floor,
-        // however close (R7.6)
-        let a = busy_song(128, 40, 41);
+        // however close, the barely stressed quarters too (R7.6)
+        let a = straight(41);
         let c = chart_with("test", &a, 4, 1, true);
         let hits = heard_above(&a, TRUE_FLOOR_PCT);
         assert_eq!(c.targets.len(), hits.len());
@@ -773,23 +829,44 @@ pub mod tests {
 
     #[test]
     fn from_the_true_chart_the_most_stressed_hits_stay_on_expert() {
-        // one hit a quarter of a beat off the beat in each bar, made far
-        // more stressed than anything else, stays on Expert, where accent
-        // decides; Hard's gap of a third of a beat cannot hold it (R7.6)
+        // one hit a quarter of a beat off the beat in each bar, made more
+        // stressed than anything else, stays on Expert, where accent
+        // decides. The song's other quarter beats are barely stressed, and
+        // the loud one moves among the bar's quarter places, so no place
+        // is the groove and Hard leaves it (R7.6)
         let mut a = busy_song(128, 40, 42);
         let d = a.division as usize;
         assert_eq!(d, 4);
         let bar = 4 * d;
-        let mut loud = Vec::new();
-        for b in 0..a.slots.len() / bar {
-            let first = (b * bar..(b + 1) * bar).find(|&q| q % d == 1 && a.slots[q] > 0);
-            if let Some(q) = first {
-                if a.slot_time(q) > 2_000_000 && a.slot_time(q) < a.length_us - 3_000_000 {
-                    a.accents[q] = 100_000;
-                    loud.push(a.slot_time(q));
-                }
+        let top = a.accents.iter().copied().max().unwrap_or(0);
+        for q in 0..a.slots.len() {
+            match q % d {
+                0 => a.accents[q] = top,
+                1 | 3 => a.accents[q] = 1,
+                _ => {}
             }
         }
+        let quarters: Vec<usize> = (0..bar)
+            .filter(|p| p % 2 == 1 && a.slots[*p + 4 * bar] > 0)
+            .collect();
+        assert!(quarters.len() >= 4, "{quarters:?}");
+        let mut loud = Vec::new();
+        for b in 0..a.slots.len() / bar {
+            let q = b * bar + quarters[b % quarters.len()];
+            if a.slots[q] > 0 && a.slot_time(q) > 2_000_000 && a.slot_time(q) < a.length_us - 3_000_000 {
+                a.accents[q] = top * 2;
+                loud.push(a.slot_time(q));
+            }
+        }
+        let hard = chart_with("test", &a, 2, 1, true);
+        assert!(
+            loud.iter()
+                .filter(|t| hard.targets.iter().any(|x| x.t == **t))
+                .count()
+                * 2
+                < loud.len(),
+            "Hard keeps most of the moving hits"
+        );
         assert!(loud.len() > 10, "{} stressed off-beats", loud.len());
         let expert = chart_with("test", &a, 3, 1, true);
         let kept = loud
@@ -921,5 +998,148 @@ pub mod tests {
             );
         }
         assert!(grooves.len() > 10);
+    }
+
+    /// A straight song, a bar of four beats in quarter lines: beats
+    /// stressed most, one half beat a bar nearly as much, the others
+    /// lightly; the first quarter of each beat stressed, the last a little
+    /// (above Hard's usual share, below a straight quarter's).
+    fn straight(seed: u64) -> Analysis {
+        let mut a = busy_song(120, 40, seed);
+        assert_eq!(a.division, 4);
+        for q in 0..a.slots.len() {
+            a.slots[q] = 5000;
+            a.accents[q] = match (q % 16, q % 4) {
+                (_, 0) => 1000,
+                (6, _) => 800,
+                (_, 2) => 400,
+                (_, 1) => 600,
+                _ => 350,
+            };
+        }
+        a
+    }
+
+    fn times_where(a: &Analysis, keep: impl Fn(usize) -> bool) -> Vec<i64> {
+        heard_above(a, TRUE_FLOOR_PCT)
+            .into_iter()
+            .filter(|&q| keep(q))
+            .map(|q| a.slot_time(q))
+            .collect()
+    }
+
+    #[test]
+    fn a_straight_songs_normal_leaves_its_lightly_stressed_half_beats() {
+        // the light half beats (a third of the beat's stress) stay out of
+        // Normal, the one the song leans on comes in (R7.8)
+        let a = straight(61);
+        let normal: Vec<i64> = chart_with("test", &a, 1, 1, true)
+            .targets
+            .iter()
+            .map(|t| t.t)
+            .collect();
+        assert_eq!(normal, times_where(&a, |q| q % 4 == 0 || q % 16 == 6));
+    }
+
+    #[test]
+    fn a_straight_songs_hard_adds_the_quarter_beats_it_leans_on() {
+        // Hard is closer than Normal in a straight song: the stressed
+        // quarter beats come in, the barely-there ones do not (R7.8)
+        let a = straight(62);
+        let hard: Vec<i64> = chart_with("test", &a, 2, 1, true)
+            .targets
+            .iter()
+            .map(|t| t.t)
+            .collect();
+        let leaned = times_where(&a, |q| q % 4 == 1);
+        let light = times_where(&a, |q| q % 4 == 3);
+        assert!(leaned.len() > 30);
+        assert!(
+            leaned.iter().all(|t| hard.contains(t)),
+            "a stressed quarter is missing: {:?}",
+            leaned.iter().filter(|t| !hard.contains(t)).collect::<Vec<_>>()
+        );
+        assert!(
+            light.iter().all(|t| !hard.contains(t)),
+            "a barely-there quarter is in"
+        );
+    }
+
+    /// A waltz at 120: bars of three beats, two lines a beat; each bar's
+    /// first beat stressed, its other beats lightly, its half beats barely.
+    fn waltz() -> Analysis {
+        let n = 160;
+        Analysis {
+            beat_us: 500_000,
+            first_beat_us: 0,
+            length_us: 40_000_000,
+            division: 2,
+            slots: vec![5000; n],
+            accents: (0..n)
+                .map(|q| match (q % 6, q % 2) {
+                    (0, _) => 1000,
+                    (_, 0) => 150,
+                    _ => 50,
+                })
+                .collect(),
+            first_sound_us: 0,
+            bar_beats: 3,
+            sustains: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn a_waltzs_easy_is_its_downbeats() {
+        // the groove is found in bars of three: every first beat, and no
+        // other beat, stressed a sixth as much (R8.2)
+        let a = waltz();
+        let easy: Vec<i64> = chart_with("test", &a, 0, 1, true)
+            .targets
+            .iter()
+            .map(|t| t.t)
+            .collect();
+        let downbeats: Vec<i64> = (0..160usize)
+            .filter(|q| q % 6 == 0)
+            .map(|q| q as i64 * 250_000)
+            .filter(|t| (1_000_000..=38_500_000).contains(t))
+            .collect();
+        assert_eq!(easy, downbeats);
+    }
+
+    #[test]
+    fn a_waltzs_combo_starts_again_every_four_bars() {
+        let a = waltz();
+        let easy = chart_with("test", &a, 0, 1, true);
+        // after the first phrase (whose first bar is in the lead-in)
+        for t in easy.targets.iter().filter(|t| t.t >= 6_000_000) {
+            let bar = t.t / 1_500_000;
+            assert_eq!(t.combo as i64, bar % 4 + 1, "the target at {}", t.t);
+        }
+    }
+
+    #[test]
+    fn from_a_score_the_leads_long_notes_are_held() {
+        // the lead holds two beats (1 s) at the start of every fourth bar,
+        // and the next bar's downbeat is silent: on Easy, a downbeat a bar,
+        // each such note is a hold to its end, 1 s on, sooner than 0.6 s
+        // (Easy's gap) before the next target, 3 s on. In the other bars,
+        // no hold (R8.2)
+        let mut a = waltz();
+        a.sustains = (0..160).map(|q| if q % 24 == 0 { 4 } else { 0 }).collect();
+        for q in (6..160).step_by(24) {
+            a.slots[q] = 0;
+        }
+        let easy = chart_with("test", &a, 0, 1, true);
+        let mut held = 0;
+        for t in &easy.targets {
+            let end = t.hold.as_ref().map(|h| h.end);
+            if t.t % 6_000_000 == 0 && t.t + 3_000_000 <= 38_500_000 {
+                assert_eq!(end, Some(t.t + 1_000_000), "the target at {}", t.t);
+                held += 1;
+            } else {
+                assert_eq!(end, None, "the target at {}", t.t);
+            }
+        }
+        assert!(held >= 5, "{held} held");
     }
 }
